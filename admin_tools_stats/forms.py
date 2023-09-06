@@ -19,7 +19,7 @@ class ChartSettingsForm(forms.Form):
                 )
                 self.fields[f"select_box_dynamic_{ch_filter.id}"].widget.attrs[
                     "class"
-                ] = "chart-input"
+                ] = "chart-input form-control"
 
         self.fields["graph_key"] = forms.CharField(
             initial=stats.graph_key,
@@ -42,7 +42,7 @@ class ChartSettingsForm(forms.Form):
             )
             self.fields["select_box_multiple_series"].widget.attrs[
                 "class"
-            ] = "chart-input select_box_multiple_series"
+            ] = "chart-input form-control select_box_multiple_series"
 
         if len(stats.allowed_type_operation_field_name) > 1:
             self.fields["select_box_operation"] = forms.ChoiceField(
@@ -50,7 +50,7 @@ class ChartSettingsForm(forms.Form):
                 label="Operation",
                 initial=stats.type_operation_field_name,
             )
-            self.fields["select_box_operation"].widget.attrs["class"] = "chart-input"
+            self.fields["select_box_operation"].widget.attrs["class"] = "chart-input form-control"
 
         operations_list = stats.get_operations_list()
         if operations_list and len(operations_list) > 1:
@@ -59,7 +59,7 @@ class ChartSettingsForm(forms.Form):
                 label="Field",
                 initial=operations_list[0],
             )
-            self.fields["select_box_operation_field"].widget.attrs["class"] = "chart-input"
+            self.fields["select_box_operation_field"].widget.attrs["class"] = "chart-input form-control"
 
         if len(stats.allowed_time_scales) > 1:
             self.fields["select_box_interval"] = forms.ChoiceField(
@@ -67,7 +67,7 @@ class ChartSettingsForm(forms.Form):
                 label="Scale",
                 initial=stats.default_time_scale,
             )
-            self.fields["select_box_interval"].widget.attrs["class"] = "chart-input"
+            self.fields["select_box_interval"].widget.attrs["class"] = "chart-input form-control"
 
         if len(stats.allowed_chart_types) > 1:
             self.fields["select_box_chart_type"] = forms.ChoiceField(
@@ -77,19 +77,19 @@ class ChartSettingsForm(forms.Form):
             )
             self.fields["select_box_chart_type"].widget.attrs[
                 "class"
-            ] = "chart-input select_box_chart_type"
+            ] = "chart-input form-control select_box_chart_type"
 
         self.fields["time_since"] = forms.DateField(
             label="Since",
             initial=(now() - timedelta(days=stats.default_time_period)).strftime("%Y-%m-%d"),
             widget=forms.TextInput(
-                attrs={"type": "date", "class": "chart-input select_box_date_since"}
+                attrs={"type": "date", "class": "chart-input form-control select_box_date_since"}
             ),
         )
         self.fields["time_until"] = forms.DateField(
             label="Until",
             initial=now().strftime("%Y-%m-%d"),
             widget=forms.TextInput(
-                attrs={"type": "date", "class": "chart-input select_box_date_until"}
+                attrs={"type": "date", "class": "chart-input form-control select_box_date_until"}
             ),
         )

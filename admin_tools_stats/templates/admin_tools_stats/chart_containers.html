@@ -3,6 +3,6 @@
    {% include "./chart_container.html" with chart=chart %}
 {% empty %}
    <p>
-      No charts available, please <a href="{% url 'admin:admin_tools_stats_dashboardstats_changelist' %}">configure them</a>
+      No hay gráficas disponibles, configure los gráficos <a href="{% url 'admin:admin_tools_stats_dashboardstats_changelist' %}"> haciendo clic acá</a>
    </p>
 {% endfor %}

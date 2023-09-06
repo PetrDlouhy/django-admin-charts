@@ -12,11 +12,17 @@
        padding: 20px 40px;
    }
    </style>
+   <script>
+      
+   </script>
 {% endblock %}
 
-{% block footer %}
-   {% if request.resolver_match.view_name == 'admin:index' %}
-      {% chart_containers %}
-   {% endif %}
+{% block content %}
    {{ block.super }}
+   {% if request.resolver_match.view_name == 'admin:index' %}
+      <div class="w-100">
+         {% chart_containers %}
+      </div>
+   {% endif %}
 {% endblock %}
+

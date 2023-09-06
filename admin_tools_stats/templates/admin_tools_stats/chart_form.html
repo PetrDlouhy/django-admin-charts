@@ -18,8 +18,8 @@
                 no-repeat;
     }
 </style>
-<form class="stateform" action="." method="POST" enctype="multipart/form-data">
-   <input id="load_on_change" title="Load on change" checked type="checkbox"/>⇒&nbsp;
+<form class="stateform form" action="." method="POST" enctype="multipart/form-data">
+   <input id="load_on_change" title="Load on change" checked type="checkbox"/> ⇒ &nbsp;
    {% csrf_token %}
    {% for w in form %}
       {% if not w.is_hidden %}
@@ -27,9 +27,13 @@
       {% endif %}
       {{ w }}
    {% endfor %}
-   &nbsp;<button class="reload" id="reload" title="reload values from unfinished periods" type="button" style="font-size:14px">⟳</button>
+   <br>
+   &nbsp;
+   <button class="btn reload" id="reload" title="reload values from unfinished periods" type="button" style="font-size:14px">⟳</button>
    {% if chart.cache_values %}
-   &nbsp;<button class="reload" id="reload_all" title="reload all visible values" type="button" style="font-size:14px">⟳ all</button>
+   &nbsp;
+   <button class="btn reload" id="reload_all" title="reload all visible values" type="button" style="font-size:14px">⟳ Todos</button>
    {% endif %}
-   &nbsp;<a href='{% url 'chart-analytics' %}?show={{ chart.graph_key }}' target='_blank'>analytics</a>
+   &nbsp;
+   {% comment %} <a href='{% url 'chart-analytics' %}?show={{ chart.graph_key }}' target='_blank'>Vista completa</a> {% endcomment %}
 </form>
