@@ -62,35 +62,35 @@ else:
 logger = logging.getLogger(__name__)
 
 operation = (
-    ("Count", "Count"),
-    ("Sum", "Sum"),
-    ("Avg", "Avgerage"),
-    ("AvgCountPerInstance", "Avgerage count per active model instance"),
-    ("Max", "Max"),
-    ("Min", "Min"),
-    ("StdDev", "StdDev"),
-    ("Variance", "Variance"),
+    ("Count", _("Count")),
+    ("Sum", _("Sum")),
+    ("Avg", _("Average")),
+    ("AvgCountPerInstance", _("Average count per active model instance")),
+    ("Max", _("Max")),
+    ("Min", _("Min")),
+    ("StdDev", _("StdDev")),
+    ("Variance", _("Variance")),
 )
 
 chart_types = (
-    ("discreteBarChart", "Bar"),
-    ("lineChart", "Line"),
-    ("multiBarChart", "Multi Bar"),
-    ("pieChart", "Pie"),
-    ("stackedAreaChart", "Stacked Area"),
-    ("multiBarHorizontalChart", "Multi Bar Horizontal"),
-    ("linePlusBarChart", "Line Plus Bar"),
-    ("scatterChart", "Scatter"),
-    ("cumulativeLineChart", "Cumulative Line"),
-    ("lineWithFocusChart", "Line With Focus"),
+    ("discreteBarChart", _("Bar")),
+    ("lineChart", _("Line")),
+    ("multiBarChart", _("Multi Bar")),
+    ("pieChart", _("Pie")),
+    ("stackedAreaChart", _("Stacked Area")),
+    ("multiBarHorizontalChart", _("Multi Bar Horizontal")),
+    ("linePlusBarChart", _("Line Plus Bar")),
+    ("scatterChart", _("Scatter")),
+    ("cumulativeLineChart", _("Cumulative Line")),
+    ("lineWithFocusChart", _("Line With Focus")),
 )
 time_scales = (
-    ("hours", "Hours"),
-    ("days", "Days"),
-    ("weeks", "Weeks"),
-    ("months", "Months"),
-    ("quarters", "Quarters"),
-    ("years", "Years"),
+    ("hours", _("Hours")),
+    ("days", _("Days")),
+    ("weeks", _("Weeks")),
+    ("months", _("Months")),
+    ("quarters", _("Quarters")),
+    ("years", _("Years")),
 )
 
 
@@ -204,7 +204,7 @@ class DashboardStatsCriteria(models.Model):
         verbose_name=_("dynamic criteria / value"),
         help_text=_(
             mark_safe(
-                "a JSON dictionary with records in two following possible formats:"
+                _("a JSON dictionary with records in two following possible formats:"
                 '<br/>"key_value": "name"'
                 '<br/>"key": [value, "name"]'
                 "<br/>use blank key for no filter"
@@ -214,12 +214,12 @@ class DashboardStatsCriteria(models.Model):
                 '<br/>  "True": [true, "True"],'
                 '<br/>  "False": [false, "False"]'
                 "<br/>}</pre>"
-                "<br/>Left blank to exploit all choices of CharField with choices",
+                "<br/>Left blank to exploit all choices of CharField with choices")
             ),
         ),
     )
     created_date = models.DateTimeField(auto_now_add=True, verbose_name=_("date"))
-    updated_date = models.DateTimeField(auto_now=True)
+    updated_date = models.DateTimeField(auto_now=True, verbose_name=_("updated_date"))
 
     def criteria_dynamic_mapping_preview(self):
         if self.criteria_dynamic_mapping:
@@ -1055,7 +1055,10 @@ class CachedValue(models.Model):
     )
 
     class Meta:
+        app_label = "admin_tools_stats"
         ordering = ("order",)
+        verbose_name = _("Cached Value")
+        verbose_name_plural = _("Stored Values")
 
 
 @receiver(post_save, sender=DashboardStatsCriteria)

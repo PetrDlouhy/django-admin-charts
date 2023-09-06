@@ -1,3 +1,4 @@
+{% load i18n %}
 <style>
     .loading {
         pointer-events:none;
@@ -29,11 +30,11 @@
    {% endfor %}
    <br>
    &nbsp;
-   <button class="btn reload" id="reload" title="reload values from unfinished periods" type="button" style="font-size:14px">⟳</button>
+   <button class="btn btn-info reload" id="reload" title="reload values from unfinished periods" type="button" style="font-size:14px">⟳</button>
    {% if chart.cache_values %}
    &nbsp;
-   <button class="btn reload" id="reload_all" title="reload all visible values" type="button" style="font-size:14px">⟳ Todos</button>
+   <button class="btn btn-secondary reload" id="reload_all" title="reload all visible values" type="button" style="font-size:14px">⟳ {% trans "all" %}</button>
    {% endif %}
    &nbsp;
-   {% comment %} <a href='{% url 'chart-analytics' %}?show={{ chart.graph_key }}' target='_blank'>Vista completa</a> {% endcomment %}
+   <a href='{% url 'chart-analytics' %}?show={{ chart.graph_key }}' target='_blank'>{% trans "analytics" %}</a>
 </form>

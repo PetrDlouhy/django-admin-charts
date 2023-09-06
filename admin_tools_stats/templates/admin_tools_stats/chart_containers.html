@@ -1,8 +1,9 @@
 {% load admin_chart_tags %}
+{% load i18n %}
 {% for chart in charts %}
    {% include "./chart_container.html" with chart=chart %}
 {% empty %}
    <p>
-      No hay gráficas disponibles, configure los gráficos <a href="{% url 'admin:admin_tools_stats_dashboardstats_changelist' %}"> haciendo clic acá</a>
+      {% trans "There aren't charts for display, please setup making" %}<a href="{% url 'admin:admin_tools_stats_dashboardstats_changelist' %}"> clic</a>
    </p>
 {% endfor %}

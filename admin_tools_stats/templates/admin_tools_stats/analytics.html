@@ -1,5 +1,6 @@
 {% extends "admin/base.html" %}
 {% load admin_chart_tags %}
+{% load i18n %}
 {% load static %}
 
 {% block extrastyle %}
@@ -25,22 +26,6 @@
    }
    .chrt_container svg {
         bottom: 0px !important;
-   }
-   #content, .chrt_container {
-        flex-grow: 1;
-   }
-   body {
-      position: absolute;
-      top: 0px;
-      bottom: 0px;
-   }
-   #container, .chrt_flex {
-      display: flex !important;
-      flex-direction: column !important;
-   }
-   #container, .admin_charts, .chrt_flex, .chrt_container, .chrt_svg_container {
-      height: 100%;
-      position: relative;
    }
 
    .modal {
@@ -73,14 +58,14 @@
 
 {% block content %}
    {% for chart in nonuser_charts %}
-   <a class="change_chart_button" href="?show={{ chart.graph_key }}" data-chart-key="{{ chart.graph_key }}"><button>{{ chart.graph_title }}</button></a>
+   <a class="change_chart_button my-2" href="?show={{ chart.graph_key }}" data-chart-key="{{ chart.graph_key }}"><button class="btn btn-info">{{ chart.graph_title }}</button></a>
    {% empty %}
       <p>
-         No charts available, please <a href="{% url 'admin:admin_tools_stats_dashboardstats_changelist' %}">configure them</a>
+         {% trans "No charts available, please " %}<a href="{% url 'admin:admin_tools_stats_dashboardstats_changelist' %}">{% trans "configure them" %}</a>
       </p>
    {% endfor %}
    {% for chart in charts %}
-   <div class="admin_charts notloaded" id="chart_element_{{ chart.graph_key }}" data-chart-key="{{ chart.graph_key }}">
+   <div class="admin_charts notloaded w-100" id="chart_element_{{ chart.graph_key }}" data-chart-key="{{ chart.graph_key }}">
    </div>
    {% endfor %}
    <div class="modal">
