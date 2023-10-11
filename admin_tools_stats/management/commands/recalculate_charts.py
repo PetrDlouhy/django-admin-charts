@@ -106,11 +106,13 @@ class Command(BaseCommand):
                     time_scales = stats.allowed_time_scales
 
                 chart_tz = get_charts_timezone()
-                for operation_field in stats.operation_field_name.split(","):
+                operation_fields = stats.operation_field_name.split(",") + [""]
+
+                for operation_field in operation_fields:
                     for selected_interval in time_scales:
                         print(
-                            f"recalculating chart {stats} with {multiseries_criteria} on "
-                            f"{operation_field} criteria in {selected_interval}"
+                            f"recalculating chart '{stats}' with '{multiseries_criteria}' on "
+                            f"'{operation_field}' criteria in {selected_interval}"
                         )
                         time_since = datetime.now() - timedelta(
                             days=stats.default_time_period
