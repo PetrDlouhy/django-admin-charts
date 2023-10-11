@@ -8,6 +8,7 @@ Changelog
 * values in divided chart now are filtered by other criteria choices
 * removed support for other JSONFields than Django's native JSONField, removed ADMIN_CHARTS_USE_JSONFIELD setting
 * admin charts are loaded by JS including chart controls for quicker admin index load
+* --time-until option was added to the `recalculate_charts` management command to recalculate charts only until given date
 
 1.3.1 (2024-04-12)
 ------------------
