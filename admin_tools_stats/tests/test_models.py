@@ -21,7 +21,12 @@ from django.test.utils import override_settings
 from django.utils import timezone as dj_timezone
 from model_bakery import baker
 
-from admin_tools_stats.models import CachedValue, Interval, truncate_ceiling
+from admin_tools_stats.models import (
+    CachedValue,
+    DashboardStats,
+    Interval,
+    truncate_ceiling,
+)
 
 
 try:
@@ -1730,3 +1735,33 @@ class CacheModelTests(TestCase):
             datetime(2010, 10, 12, 0, 0).astimezone(current_tz): {"": 1},
         }
         self.assertDictEqual(serie, testing_data)
+
+
+class DashboardStatsTest(TestCase):
+    def setUp(self):
+        self.user = baker.make("User", username="testuser", password="12345")
+        self.user2 = baker.make("User", username="testuser2", password="12345")
+
+        # Create test data using model bakery
+        self.kid1 = baker.make("TestKid", happy=True, age=10, height=140, author=self.user)
+        self.kid2 = baker.make("TestKid", happy=False, age=8, height=130, author=self.user2)
+        self.kid3 = baker.make("TestKid", happy=True, age=7, height=120, author=self.user)
+
+        # Create a DashboardStats instance with queryset modifiers
+        self.dashboard_stats = DashboardStats.objects.create(
+            graph_key="test_graph",
+            graph_title="Test Graph",
+            model_app_name="demoproject",
+            model_name="TestKid",
+            date_field_name="birthday",
+            queryset_modifiers=[
+                {"filter": {"happy": True}},
+                {"exclude": {"height__lt": 130}},
+                {"order_by": ["-age"]},
+            ],
+        )
+
+    def test_get_queryset(self):
+        qs = self.dashboard_stats.get_queryset()
+        self.assertEqual(qs.count(), 1)
+        self.assertEqual(qs.first(), self.kid1)

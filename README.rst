@@ -44,6 +44,16 @@ Requirements
 * PostgreSQL (MySQL is experimental, other databases probably not working but PRs are welcome)
 * ``simplejson`` for charts based on ``DecimalField`` values
 
+=======
+Warning
+=======
+
+The ``django-admin-charts`` application intended usage is mainly for system admins with access to Django admin interface.
+The application is not intended to be used by untrusted users, as it is exposing some Django functionality to the user, especially in the chart configuration.
+
+It has not been examined whether some malicious user with access to the charts could exploit the application to gain access to the system or data.
+
+
 ============
 Installation
 ============

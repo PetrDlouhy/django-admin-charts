@@ -184,7 +184,10 @@ class DashboardStatsCriteria(models.Model):
         null=True,
         blank=True,
         verbose_name=_("fixed criteria / value"),
-        help_text=_("a JSON dictionary of key-value pairs that will be used for the criteria"),
+        help_text=_(
+            "DEPRECATED.<br>Use queryset modifiers instead<br>"
+            "A JSON dictionary of key-value pairs that will be used for the criteria"
+        ),
     )
     dynamic_criteria_field_name = models.CharField(
         max_length=90,
@@ -308,6 +311,29 @@ class DashboardStats(models.Model):
         help_text=_(
             "The field you want to aggregate, ex. <i>amount</i>, <i>salaries__total_income</i>.<br/>"
             "Can contain multiple fields divided by comma.",
+        ),
+    )
+    queryset_modifiers = JSONField(
+        verbose_name=_("Queryset modifiers"),
+        null=True,
+        blank=True,
+        help_text=mark_safe(
+            "Additional queryset modifiers in JSON format:<br>"
+            "<pre>"
+            "[<br>"
+            '    {"filter": {"status": "active"}},<br>'
+            '    {"exclude": {"status": "deleted"}}<br>'
+            '    {"my_annotion_function": {}}<br>'
+            "]"
+            "</pre>"
+            "Ensure the format is a valid JSON array of objects."
+            "<br>"
+            "The format of the dict on each line is:"
+            "<br>"
+            '{"function_name": {"arg1": "value1", "arg2": "value2"}}'
+            "<br>"
+            "Where the arg/value pairs are the arguments to the function"
+            "that will be called on the queryset in order given by the list."
         ),
     )
     distinct = models.BooleanField(
@@ -434,6 +460,14 @@ class DashboardStats(models.Model):
 
     def get_queryset(self):
         qs = self.get_model().objects
+        if self.queryset_modifiers:
+            for modifier in self.queryset_modifiers:
+                method_name = list(modifier.keys())[0]
+                method_args = modifier[method_name]
+                if isinstance(method_args, dict):
+                    qs = getattr(qs, method_name)(**method_args)
+                else:
+                    qs = getattr(qs, method_name)(*method_args)
         return qs
 
     def get_operation_field(self, operation):
@@ -530,6 +564,7 @@ class DashboardStats(models.Model):
             criteria = m2m.criteria
             # fixed mapping value passed info queryset_filters
             if criteria.criteria_fix_mapping:
+                logger.warning("criteria_fix_mapping is deprecated. Use queryset_modifiers instead")
                 for key in criteria.criteria_fix_mapping:
                     # value => criteria.criteria_fix_mapping[key]
                     queryset_filters[key] = criteria.criteria_fix_mapping[key]

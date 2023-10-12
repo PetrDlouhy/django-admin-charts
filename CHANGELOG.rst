@@ -4,6 +4,7 @@ Changelog
 1.4.0 (2024-08-02)
 ------------------
 
+* added DashboardStats.queryset_modifiers to allow to modify queryset before it is used in chart, e.g. to add prefetch_related, filters or execute annotation functions. Fixed criteria are now deprecated in favour of queryset_modifiers.
 * values in divided chart now are filtered by other criteria choices
 * removed support for other JSONFields than Django's native JSONField, removed ADMIN_CHARTS_USE_JSONFIELD setting
 * admin charts are loaded by JS including chart controls for quicker admin index load
