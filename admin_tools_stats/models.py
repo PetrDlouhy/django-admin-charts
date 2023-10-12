@@ -315,6 +315,22 @@ class DashboardStats(models.Model):
             "Can contain multiple fields divided by comma.",
         ),
     )
+    queryset_modifiers = JSONField(
+        verbose_name=_("Queryset modifiers"),
+        null=True,
+        blank=True,
+        help_text=mark_safe(
+            "Additional queryset modifiers in JSON format:<br>"
+            "<pre>"
+            "[<br>"
+            '    {"filter": {"status": "active"}},<br>'
+            '    {"exclude": {"status": "deleted"}}<br>'
+            '    {"my_annotion_function": {}}<br>'
+            "]"
+            "</pre>"
+            "Ensure the format is a valid JSON array of objects."
+        ),
+    )
     distinct = models.BooleanField(
         default=False,
         null=False,
@@ -439,6 +455,14 @@ class DashboardStats(models.Model):
 
     def get_queryset(self):
         qs = self.get_model().objects
+        if self.queryset_modifiers:
+            for modifier in self.queryset_modifiers:
+                method_name = list(modifier.keys())[0]
+                method_args = modifier[method_name]
+                if isinstance(method_args, dict):
+                    qs = getattr(qs, method_name)(**method_args)
+                else:
+                    qs = getattr(qs, method_name)(*method_args)
         return qs
 
     def get_operation_field(self, operation):
