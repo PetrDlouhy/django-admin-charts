@@ -37,7 +37,7 @@ class DashboardStatsCriteriaAdmin(admin.ModelAdmin):
     list_display = (
         "id",
         "criteria_name",
-        "criteria_name",
+        "criteria_fix_mapping",
         "dynamic_criteria_field_name",
         "criteria_dynamic_mapping_preview",
     )
