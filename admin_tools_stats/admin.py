@@ -108,7 +108,7 @@ class DashboardStatsAdmin(admin.ModelAdmin):
                 "fields": (
                     "graph_key",
                     "graph_title",
-                    ("model_app_name", "model_name", "date_field_name"),
+                    ("model_app_name", "model_name", "date_field_name", "queryset_modifiers"),
                     ("operation_field_name", "distinct"),
                     ("user_field_name", "show_to_users"),
                     ("allowed_type_operation_field_name", "type_operation_field_name"),
@@ -140,6 +140,7 @@ class DashboardStatsAdmin(admin.ModelAdmin):
         "created_date",
         "date_field_name",
         "operation_field_name",
+        "queryset_modifiers",
         "default_chart_type",
     )
     list_filter = [

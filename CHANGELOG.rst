@@ -4,6 +4,7 @@ Changelog
 1.4.0 (2024-08-02)
 ------------------
 
+* added DashboardStats.queryset_modifiers to allow to modify queryset before it is used in chart, e.g. to add prefetch_related, filters or execute annotation functions. Fixed criteria are now deprecated in favour of queryset_modifiers.
 * values in divided chart now are filtered by other criteria choices
 
 1.3.1 (2024-04-12)
