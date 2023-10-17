@@ -3,3 +3,11 @@
 <link media="all" href="{% set_nvd3_css_path %}" type="text/css" rel="stylesheet" />
 <script src="{% set_d3_js_path %}" type="text/javascript"></script>
 <script src="{% set_nvd3_js_path %}" type="text/javascript"></script>
+<script>
+    window.onload = function() {
+        $(".admin_chanrts_dynamic").each(function() {
+            var chart_key = $(this).data("chart-key");
+            loadAdminChart(chart_key);
+        });
+    };
+</script>
