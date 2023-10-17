@@ -52,8 +52,6 @@ class DashboardChart(modules.DashboardModule):
 
         self.prepare_module_data(self.graph_key)
 
-        self.form_field = self.get_control_form(self.graph_key)
-
         if hasattr(self, "error_message"):
             messages.add_message(
                 request,
@@ -70,14 +68,6 @@ class DashboardChart(modules.DashboardModule):
         """Returns graph title"""
         try:
             return self.dashboard_stats.graph_title
-        except LookupError as e:
-            self.error_message = str(e)
-            return ""
-
-    def get_control_form(self, graph_key):
-        """To get dynamic criteria & return into select box to display on dashboard"""
-        try:
-            return self.dashboard_stats.get_control_form()
         except LookupError as e:
             self.error_message = str(e)
             return ""
