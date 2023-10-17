@@ -7,10 +7,10 @@
        {% include '../../include_nvd3.html' %}
     {% endif %}
 
-    {% if module.form_field %}
-       {% get_control_form module.dashboard_stats request.user as form %}
-       {% include "../chart_form.html" with chart=module.dashboard_stats %}
-    {% endif %}
+     {% with module.dashboard_stats as chart %}
+       <div class="admin_charts admin_chanrts_dynamic notloaded" id="chart_element_{{ chart.graph_key }}" data-chart-key="{{ chart.graph_key }}">
+       </div>
+     {% endwith %}
 
     {% include_container module.chart_container %}
 
