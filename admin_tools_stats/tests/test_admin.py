@@ -68,7 +68,7 @@ class AdminIndexTests(BaseSuperuserAuthenticatedClient):
     def test_admin_index(self):
         """Test vanila admin index page, that should contain chart"""
         url = reverse("admin:index")
-        response = self.client.get(url)
+        response = self.client.get(url + "?analytics_chart=True")
         self.assertContains(response, "<h3>User chart</h3>", html=True)
         self.assertContains(
             response,
@@ -123,6 +123,7 @@ class AdminToolsStatsAdminCharts(BaseSuperuserAuthenticatedClient):
             graph_title="User logged in graph",
             model_name="User",
             model_app_name="auth",
+            graph_key="user_graph",
         )
         criteria = baker.make(
             "DashboardStatsCriteria",
@@ -153,12 +154,8 @@ class AdminToolsStatsAdminCharts(BaseSuperuserAuthenticatedClient):
         )
         self.assertContains(
             response,
-            '<option value="True">Active</option>',
-            html=True,
-        )
-        self.assertContains(
-            response,
-            '<option value="False">Inactive</option>',
+            '<div class="admin_charts admin_chanrts_dynamic notloaded" id="chart_element_user_graph" '
+            'data-chart-key="user_graph"></div>',
             html=True,
         )
 
@@ -191,11 +188,8 @@ class AdminToolsStatsAdminCharts(BaseSuperuserAuthenticatedClient):
         response = self.client.get("/admin/")
         self.assertContains(
             response,
-            '<select name="select_box_multiple_series" '
-            'class="chart-input select_box_multiple_series" required>'
-            '<option value="">-------</option>'
-            '<option value="2" selected>active</option>'
-            "</select>",
+            '<div class="admin_charts admin_chanrts_dynamic notloaded" id="chart_element_user_graph" '
+            'data-chart-key="user_graph"></div>',
             html=True,
         )
 
@@ -219,15 +213,13 @@ class AdminToolsStatsAdminCharts(BaseSuperuserAuthenticatedClient):
             },
         )
         baker.make("CriteriaToStatsM2M", criteria=criteria, stats=stats)
-        response = self.client.post("/admin/", {"select_box_user_graph": "true"})
-        self.assertContains(
-            response,
-            '<input type="hidden" class="hidden_graph_key" name="graph_key" value="user_graph">',
-            html=True,
+        response = self.client.post(
+            "/admin/?analytics_chart=True", {"select_box_user_graph": "true"}
         )
         self.assertContains(
             response,
-            '<option value="True">Active</option>',
+            '<div class="admin_charts admin_chanrts_dynamic notloaded" id="chart_element_user_graph" '
+            'data-chart-key="user_graph"></div>',
             html=True,
         )
 
