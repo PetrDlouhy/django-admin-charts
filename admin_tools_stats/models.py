@@ -587,8 +587,6 @@ class DashboardStats(models.Model):
                     for dynamic_value in dynamic_values:
                         try:
                             criteria_value = m2m.get_dynamic_choices(
-                                time_since,
-                                time_until,
                                 operation_choice,
                                 operation_field_choice,
                                 user,
@@ -700,8 +698,6 @@ class DashboardStats(models.Model):
         )
         if m2m and m2m.criteria.dynamic_criteria_field_name:
             choices = m2m.get_dynamic_choices(
-                time_since,
-                time_until,
                 operation_choice,
                 operation_field_choice,
                 user,
@@ -940,8 +936,22 @@ class CriteriaToStatsM2M(models.Model):
         blank=True,
     )
     choices_based_on_time_range = models.BooleanField(
-        verbose_name=_("Choices are dependend on chart time range"),
-        help_text=_("Choices are not cached if this is set to true"),
+        verbose_name=_("Calculate by queryset values"),
+        help_text=_(
+            mark_safe(
+                (
+                    "If checked:<br>\n"
+                    "- divide values will not be cached\n"
+                    "- divide values will change with change of time range\n"
+                    "- other criteria will filter divide values\n"
+                    "\n"
+                    "If unchecked:\n"
+                    "- values will be cached\n"
+                    "- divide values are calculated from related models,"
+                    "which can be much quicker for large datasets\n"
+                )
+            )
+        ),
         default=False,
     )
     count_limit = models.PositiveIntegerField(
@@ -960,11 +970,18 @@ class CriteriaToStatsM2M(models.Model):
         query = self.stats.get_queryset().all().query
         return query.resolve_ref(field_name).field
 
+    def get_related_model_and_field(self, field_name):
+        """Traverse the field_name to get the related model and end target field."""
+        base_model = self.stats.get_queryset().model
+        fields = field_name.split("__")
+        for rel in fields[:-1]:  # omit the last segment since it's the field in the target model
+            relation = base_model._meta.get_field(rel)
+            base_model = relation.related_model
+        return base_model, fields[-1]  # returns target model and target field name
+
     @memoize(60 * 60 * 24 * 7)
     def _get_dynamic_choices(
         self,
-        time_since: datetime.datetime,
-        time_until: datetime.datetime,
         count_limit: Optional[int] = None,
         operation_choice=None,
         operation_field_choice=None,
@@ -995,41 +1012,40 @@ class CriteriaToStatsM2M(models.Model):
             else:
                 choices: OrderedDict[str, Tuple[Union[str, bool, List[str]], str]] = OrderedDict()
                 fchoices: Dict[str, str] = dict(field.choices or [])
-                date_filters = {}
-                if not self.stats.cache_values:
-                    if time_since is not None:
-                        if (
-                            time_since.tzinfo is None
-                            or time_since.tzinfo.utcoffset(time_since) is None
-                        ):
-                            time_since = time_since.astimezone(get_charts_timezone())
-                        date_filters["%s__gte" % self.stats.date_field_name] = time_since
-                    if time_until is not None:
-                        if (
-                            time_until.tzinfo is None
-                            or time_until.tzinfo.utcoffset(time_until) is None
-                        ):
-                            time_until = time_until.astimezone(get_charts_timezone()).replace(
-                                hour=23, minute=59
+                if self.choices_based_on_time_range:
+                    choices_queryset = self.stats.get_queryset()
+                    if queryset_filter:
+                        choices_queryset = choices_queryset.filter(**queryset_filter)
+                    if user and not user.has_perm("admin_tools_stats.view_dashboardstats"):
+                        if not self.stats.user_field_name:
+                            raise Exception(
+                                "User field must be defined to enable charts for non-superusers"
                             )
-                        end_time = time_until
-                        date_filters["%s__lte" % self.stats.date_field_name] = end_time
-                choices_queryset = self.stats.get_queryset().filter(
-                    **date_filters,
-                )
-                if queryset_filter:
-                    choices_queryset = choices_queryset.filter(**queryset_filter)
-                if user and not user.has_perm("admin_tools_stats.view_dashboardstats"):
-                    if not self.stats.user_field_name:
-                        raise Exception(
-                            "User field must be defined to enable charts for non-superusers"
+                        choices_queryset = choices_queryset.filter(
+                            **{self.stats.user_field_name: user}
                         )
-                    choices_queryset = choices_queryset.filter(**{self.stats.user_field_name: user})
-                choices_queryset = choices_queryset.values_list(
-                    field_name,
-                    flat=True,
-                ).distinct()
+                    choices_queryset = choices_queryset.values_list(
+                        field_name,
+                        flat=True,
+                    ).distinct()
+                else:
+                    # Obtain the related model and the target field dynamically from the field_name
+                    related_model, field_name = self.get_related_model_and_field(field_name)
+
+                    choices_queryset = related_model.objects.values_list(
+                        field_name,  # targeting the final field in the related model
+                        flat=True,
+                    ).distinct()
+
                 if count_limit:
+                    choices_queryset = (
+                        self.stats.get_queryset()
+                        .values_list(
+                            field_name,
+                            flat=True,
+                        )
+                        .distinct()
+                    )
                     choices_queryset = choices_queryset.annotate(
                         f_count=self.stats.get_operation(operation_choice, operation_field_choice),
                     ).order_by(
@@ -1056,8 +1072,6 @@ class CriteriaToStatsM2M(models.Model):
 
     def get_dynamic_choices(
         self,
-        time_since=None,
-        time_until=None,
         operation_choice=None,
         operation_field_choice=None,
         user=None,
@@ -1065,12 +1079,7 @@ class CriteriaToStatsM2M(models.Model):
     ):
         if not self.count_limit:  # We don't have to cache different operation choices
             operation_choice = None
-        if not self.choices_based_on_time_range or self.stats.cache_values:
-            time_since = None
-            time_until = None
         choices = self._get_dynamic_choices(
-            time_since,
-            time_until,
             self.count_limit,
             operation_choice,
             operation_field_choice,
