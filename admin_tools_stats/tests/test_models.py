@@ -13,6 +13,7 @@ from datetime import date, datetime, timezone
 from unittest import skipIf
 
 from django.conf import settings
+from django.contrib.auth.models import User
 from django.core.cache import cache
 from django.core.exceptions import ValidationError
 from django.db.models.aggregates import Avg, Count, Max, Min, StdDev, Sum, Variance
@@ -23,7 +24,9 @@ from model_bakery import baker
 
 from admin_tools_stats.models import (
     CachedValue,
+    CriteriaToStatsM2M,
     DashboardStats,
+    DashboardStatsCriteria,
     Interval,
     truncate_ceiling,
 )
@@ -106,25 +109,24 @@ class DashboardStatsCriteriaTests(TestCase):
         """
         Test _get_dynamic_choices() function
         """
-        baker.make("User", first_name="user1", last_name="bar_1", date_joined=date(2014, 1, 1))
-        criteria_m2m = baker.make(
-            "CriteriaToStatsM2M",
-            stats__graph_title="Graph",
-            criteria__criteria_name="Foo",
-            criteria__dynamic_criteria_field_name="first_name",
-            stats__model_app_name="auth",
-            stats__model_name="User",
-            stats__cache_values=False,
-            stats__date_field_name="date_joined",
-        )
-        result = criteria_m2m._get_dynamic_choices(
-            datetime(2014, 1, 1, tzinfo=UTC), datetime(2014, 1, 2, tzinfo=UTC)
-        )
-        self.assertEqual(result, OrderedDict([("user1", ("user1", "user1"))]))
-        result = criteria_m2m._get_dynamic_choices(
-            datetime(2014, 1, 1, tzinfo=None), datetime(2014, 1, 2, tzinfo=None)
-        )
-        self.assertEqual(result, OrderedDict([("user1", ("user1", "user1"))]))
+        for choices_time_range in (True, False):
+            with self.subTest(choices_time_range):
+                baker.make(
+                    "User", first_name="user1", last_name="bar_1", date_joined=date(2014, 1, 1)
+                )
+                criteria_m2m = baker.make(
+                    "CriteriaToStatsM2M",
+                    stats__graph_title="Graph",
+                    criteria__criteria_name="Foo",
+                    criteria__dynamic_criteria_field_name="first_name",
+                    stats__model_app_name="auth",
+                    stats__model_name="User",
+                    stats__cache_values=False,
+                    stats__date_field_name="date_joined",
+                    choices_based_on_time_range=choices_time_range,
+                )
+                result = criteria_m2m._get_dynamic_choices()
+                self.assertEqual(result, OrderedDict([("user1", ("user1", "user1"))]))
 
     def test__get_dynamic_choices_caching(self):
         """
@@ -136,82 +138,88 @@ class DashboardStatsCriteriaTests(TestCase):
         This didn't work with cache_utils, and had to be
         dealt with slef parameter containing another self
         """
-        baker.make("User", first_name="user1", last_name="bar_1")
-        criteria_m2m = baker.make(
-            "CriteriaToStatsM2M",
-            stats__graph_title="Graph",
-            criteria__criteria_name="Foo",
-            criteria__dynamic_criteria_field_name="first_name",
-            stats__model_app_name="auth",
-            stats__model_name="User",
-            stats__cache_values=False,
-        )
-        self.assertEqual(
-            criteria_m2m._get_dynamic_choices(None, None),
-            OrderedDict([("user1", ("user1", "user1"))]),
-        )
+        for choices_time_range in (True, False):
+            with self.subTest(choices_time_range):
+                baker.make("User", first_name="user1", last_name="bar_1")
+                criteria_m2m = baker.make(
+                    "CriteriaToStatsM2M",
+                    stats__graph_title="Graph",
+                    criteria__criteria_name="Foo",
+                    criteria__dynamic_criteria_field_name="first_name",
+                    stats__model_app_name="auth",
+                    stats__model_name="User",
+                    stats__cache_values=False,
+                )
+                self.assertEqual(
+                    criteria_m2m._get_dynamic_choices(None, None),
+                    OrderedDict([("user1", ("user1", "user1"))]),
+                )
 
-        criteria_m2m_1 = baker.make(
-            "CriteriaToStatsM2M",
-            criteria__dynamic_criteria_field_name="last_name",
-            stats__model_app_name="auth",
-            stats__model_name="User",
-        )
-        self.assertEqual(
-            criteria_m2m_1._get_dynamic_choices(None, None),
-            OrderedDict([("bar_1", ("bar_1", "bar_1"))]),
-        )
+                criteria_m2m_1 = baker.make(
+                    "CriteriaToStatsM2M",
+                    criteria__dynamic_criteria_field_name="last_name",
+                    stats__model_app_name="auth",
+                    stats__model_name="User",
+                    choices_based_on_time_range=choices_time_range,
+                )
+                self.assertEqual(
+                    criteria_m2m_1._get_dynamic_choices(None, None),
+                    OrderedDict([("bar_1", ("bar_1", "bar_1"))]),
+                )
 
-        user2 = baker.make("User", first_name="user2", last_name="bar_2")
-        self.assertEqual(  # Value is cached, so it doesn't change
-            criteria_m2m._get_dynamic_choices(None, None),
-            OrderedDict([("user1", ("user1", "user1"))]),
-        )
+                user2 = baker.make("User", first_name="user2", last_name="bar_2")
+                self.assertEqual(  # Value is cached, so it doesn't change
+                    criteria_m2m._get_dynamic_choices(None, None),
+                    OrderedDict([("user1", ("user1", "user1"))]),
+                )
 
-        criteria_m2m.criteria.save()
-        self.assertEqual(  # Criteria save invalidates cache, so returned value changes
-            criteria_m2m._get_dynamic_choices(None, None),
-            OrderedDict([("user1", ("user1", "user1")), ("user2", ("user2", "user2"))]),
-        )
+                criteria_m2m.criteria.save()
+                self.assertEqual(  # Criteria save invalidates cache, so returned value changes
+                    criteria_m2m._get_dynamic_choices(None, None),
+                    OrderedDict([("user1", ("user1", "user1")), ("user2", ("user2", "user2"))]),
+                )
 
-        user2.first_name = "user3"
-        user2.save()
-        self.assertEqual(  # Cache is not invalidated, so returned value doesn't change
-            criteria_m2m._get_dynamic_choices(None, None),
-            OrderedDict([("user1", ("user1", "user1")), ("user2", ("user2", "user2"))]),
-        )
+                user2.first_name = "user3"
+                user2.save()
+                self.assertEqual(  # Cache is not invalidated, so returned value doesn't change
+                    criteria_m2m._get_dynamic_choices(None, None),
+                    OrderedDict([("user1", ("user1", "user1")), ("user2", ("user2", "user2"))]),
+                )
 
-        criteria_m2m.save()
-        self.assertEqual(  # Criteria save invalidates cache, so returned value changes
-            criteria_m2m._get_dynamic_choices(None, None),
-            OrderedDict([("user1", ("user1", "user1")), ("user3", ("user3", "user3"))]),
-        )
+                criteria_m2m.save()
+                self.assertEqual(  # Criteria save invalidates cache, so returned value changes
+                    criteria_m2m._get_dynamic_choices(None, None),
+                    OrderedDict([("user1", ("user1", "user1")), ("user3", ("user3", "user3"))]),
+                )
 
-        user2.first_name = "user4"
-        user2.save()
-        self.assertEqual(  # Cache is not invalidated, so returned value doesn't change
-            criteria_m2m._get_dynamic_choices(None, None),
-            OrderedDict([("user1", ("user1", "user1")), ("user3", ("user3", "user3"))]),
-        )
+                user2.first_name = "user4"
+                user2.save()
+                self.assertEqual(  # Cache is not invalidated, so returned value doesn't change
+                    criteria_m2m._get_dynamic_choices(None, None),
+                    OrderedDict([("user1", ("user1", "user1")), ("user3", ("user3", "user3"))]),
+                )
 
-        criteria_m2m.stats.save()
-        self.assertEqual(  # Criteria save invalidates cache, so returned value changes
-            criteria_m2m._get_dynamic_choices(None, None),
-            OrderedDict([("user1", ("user1", "user1")), ("user4", ("user4", "user4"))]),
-        )
+                criteria_m2m.stats.save()
+                self.assertEqual(  # Criteria save invalidates cache, so returned value changes
+                    criteria_m2m._get_dynamic_choices(None, None),
+                    OrderedDict([("user1", ("user1", "user1")), ("user4", ("user4", "user4"))]),
+                )
 
-        # Value for different criteria didn't invalidate the whole time
-        self.assertEqual(
-            criteria_m2m_1._get_dynamic_choices(None, None),
-            OrderedDict([("bar_1", ("bar_1", "bar_1"))]),
-        )
+                # Value for different criteria didn't invalidate the whole time
+                self.assertEqual(
+                    criteria_m2m_1._get_dynamic_choices(None, None),
+                    OrderedDict([("bar_1", ("bar_1", "bar_1"))]),
+                )
 
-        # But now they will
-        criteria_m2m_1.save()
-        self.assertEqual(
-            criteria_m2m_1._get_dynamic_choices(None, None),
-            OrderedDict([("bar_1", ("bar_1", "bar_1")), ("bar_2", ("bar_2", "bar_2"))]),
-        )
+                # But now they will
+                criteria_m2m_1.save()
+                self.assertEqual(
+                    criteria_m2m_1._get_dynamic_choices(None, None),
+                    OrderedDict([("bar_1", ("bar_1", "bar_1")), ("bar_2", ("bar_2", "bar_2"))]),
+                )
+
+                # Clear for next run
+                User.objects.all().delete()
 
 
 class ModelTests(TestCase):
@@ -468,11 +476,11 @@ class ModelTests(TestCase):
             user,
         )
         testing_data = {
-            datetime(2010, 10, 8, 0, 0): {"Adam": 0, "Petr": 0},
-            datetime(2010, 10, 9, 0, 0): {"Adam": 1, "Petr": 0},
-            datetime(2010, 10, 10, 0, 0): {"Adam": 0, "Petr": 1},
-            datetime(2010, 10, 11, 0, 0): {"Adam": 0, "Petr": 0},
-            datetime(2010, 10, 12, 0, 0): {"Adam": 0, "Petr": 0},
+            datetime(2010, 10, 8, 0, 0): {"Adam": 0, "Jirka": 0, "Petr": 0},
+            datetime(2010, 10, 9, 0, 0): {"Adam": 1, "Jirka": 0, "Petr": 0},
+            datetime(2010, 10, 10, 0, 0): {"Adam": 0, "Jirka": 0, "Petr": 1},
+            datetime(2010, 10, 11, 0, 0): {"Adam": 0, "Jirka": 0, "Petr": 0},
+            datetime(2010, 10, 12, 0, 0): {"Adam": 0, "Jirka": 0, "Petr": 0},
         }
         self.assertDictEqual(serie, testing_data)
 
@@ -486,47 +494,53 @@ class ModelTests(TestCase):
         Test function to check DashboardStats.get_multi_time_series()
         Choices are limited by count
         """
-        criteria = baker.make(
-            "DashboardStatsCriteria",
-            criteria_name="name",
-            dynamic_criteria_field_name="first_name",
-        )
-        m2m = baker.make(
-            "CriteriaToStatsM2M",
-            criteria=criteria,
-            stats=self.stats,
-            use_as="multiple_series",
-            count_limit=1,
-        )
-        user = baker.make(
-            "User",
-            date_joined=date(2010, 10, 10),
-            first_name="Petr",
-            is_superuser=True,
-        )
-        baker.make("User", date_joined=date(2010, 10, 10), first_name="Petr")
-        baker.make("User", date_joined=date(2010, 10, 9), first_name="Adam")
-        baker.make("User", date_joined=date(2010, 10, 11), first_name="Jirka")
-        time_since = datetime(2010, 10, 8)
-        time_until = datetime(2010, 10, 12)
+        for choices_time_range in (True, False):
+            with self.subTest(choices_time_range):
+                criteria = baker.make(
+                    "DashboardStatsCriteria",
+                    criteria_name="name",
+                    dynamic_criteria_field_name="first_name",
+                )
+                m2m = baker.make(
+                    "CriteriaToStatsM2M",
+                    criteria=criteria,
+                    stats=self.stats,
+                    use_as="multiple_series",
+                    count_limit=1,
+                    choices_based_on_time_range=choices_time_range,
+                )
+                user = baker.make(
+                    "User",
+                    date_joined=date(2010, 10, 10),
+                    first_name="Petr",
+                    is_superuser=True,
+                )
+                baker.make("User", date_joined=date(2010, 10, 10), first_name="Petr")
+                baker.make("User", date_joined=date(2010, 10, 9), first_name="Adam")
+                baker.make("User", date_joined=date(2010, 10, 11), first_name="Jirka")
+                time_since = datetime(2010, 10, 8)
+                time_until = datetime(2010, 10, 12)
 
-        serie = self.stats.get_multi_time_series(
-            {"select_box_multiple_series": m2m.id},
-            time_since,
-            time_until,
-            Interval.days,
-            None,
-            None,
-            user,
-        )
-        testing_data = {
-            datetime(2010, 10, 8, 0, 0): {"other": 0, "Petr": 0},
-            datetime(2010, 10, 9, 0, 0): {"other": 1, "Petr": 0},
-            datetime(2010, 10, 10, 0, 0): {"other": 0, "Petr": 2},
-            datetime(2010, 10, 11, 0, 0): {"other": 1, "Petr": 0},
-            datetime(2010, 10, 12, 0, 0): {"other": 0, "Petr": 0},
-        }
-        self.assertDictEqual(serie, testing_data)
+                serie = self.stats.get_multi_time_series(
+                    {"select_box_multiple_series": m2m.id},
+                    time_since,
+                    time_until,
+                    Interval.days,
+                    None,
+                    None,
+                    user,
+                )
+                testing_data = {
+                    datetime(2010, 10, 8, 0, 0): {"other": 0, "Petr": 0},
+                    datetime(2010, 10, 9, 0, 0): {"other": 1, "Petr": 0},
+                    datetime(2010, 10, 10, 0, 0): {"other": 0, "Petr": 2},
+                    datetime(2010, 10, 11, 0, 0): {"other": 1, "Petr": 0},
+                    datetime(2010, 10, 12, 0, 0): {"other": 0, "Petr": 0},
+                }
+                self.assertDictEqual(serie, testing_data)
+
+                # Clear for next run
+                User.objects.all().delete()
 
     @skipIf(
         settings.DATABASES["default"]["ENGINE"] == "django.db.backends.mysql",
@@ -975,41 +989,47 @@ class ModelTests(TestCase):
         DashboardStatsCriteria is set, but without dynamic mapping,
         so the values are autogenerated on CharField.
         """
-        criteria = baker.make(
-            "DashboardStatsCriteria",
-            criteria_name="name",
-            dynamic_criteria_field_name="last_name",
-        )
-        m2m = baker.make(
-            "CriteriaToStatsM2M",
-            criteria=criteria,
-            stats=self.stats,
-            use_as="multiple_series",
-        )
-        baker.make("User", date_joined=date(2010, 10, 12), last_name="Foo")
-        baker.make("User", date_joined=date(2010, 10, 13), last_name="Bar")
-        baker.make("User", date_joined=date(2010, 10, 14))
-        time_since = datetime(2010, 10, 10)
-        time_until = datetime(2010, 10, 14)
+        for choices_time_range in (True, False):
+            with self.subTest(choices_time_range):
+                criteria = baker.make(
+                    "DashboardStatsCriteria",
+                    criteria_name="name",
+                    dynamic_criteria_field_name="last_name",
+                )
+                m2m = baker.make(
+                    "CriteriaToStatsM2M",
+                    criteria=criteria,
+                    stats=self.stats,
+                    use_as="multiple_series",
+                    choices_based_on_time_range=choices_time_range,
+                )
+                baker.make("User", date_joined=date(2010, 10, 12), last_name="Foo")
+                baker.make("User", date_joined=date(2010, 10, 13), last_name="Bar")
+                baker.make("User", date_joined=date(2010, 10, 14))
+                time_since = datetime(2010, 10, 10)
+                time_until = datetime(2010, 10, 14)
 
-        user = baker.make("User", is_superuser=True)
-        serie = self.stats.get_multi_time_series(
-            {"select_box_multiple_series": m2m.id},
-            time_since,
-            time_until,
-            Interval.days,
-            None,
-            None,
-            user,
-        )
-        testing_data = {
-            datetime(2010, 10, 10, 0, 0): OrderedDict((("Bar", 0), ("Foo", 0))),
-            datetime(2010, 10, 11, 0, 0): OrderedDict((("Bar", 0), ("Foo", 0))),
-            datetime(2010, 10, 12, 0, 0): OrderedDict((("Bar", 0), ("Foo", 1))),
-            datetime(2010, 10, 13, 0, 0): OrderedDict((("Bar", 1), ("Foo", 0))),
-            datetime(2010, 10, 14, 0, 0): OrderedDict((("Bar", 0), ("Foo", 0))),
-        }
-        self.assertDictEqual(serie, testing_data)
+                user = baker.make("User", is_superuser=True)
+                serie = self.stats.get_multi_time_series(
+                    {"select_box_multiple_series": m2m.id},
+                    time_since,
+                    time_until,
+                    Interval.days,
+                    None,
+                    None,
+                    user,
+                )
+                testing_data = {
+                    datetime(2010, 10, 10, 0, 0): OrderedDict((("Bar", 0), ("Foo", 0))),
+                    datetime(2010, 10, 11, 0, 0): OrderedDict((("Bar", 0), ("Foo", 0))),
+                    datetime(2010, 10, 12, 0, 0): OrderedDict((("Bar", 0), ("Foo", 1))),
+                    datetime(2010, 10, 13, 0, 0): OrderedDict((("Bar", 1), ("Foo", 0))),
+                    datetime(2010, 10, 14, 0, 0): OrderedDict((("Bar", 0), ("Foo", 0))),
+                }
+                self.assertDictEqual(serie, testing_data)
+
+                # Clear for next run
+                User.objects.all().delete()
 
     @skipIf(
         settings.DATABASES["default"]["ENGINE"] == "django.db.backends.mysql",
@@ -1036,6 +1056,7 @@ class ModelTests(TestCase):
             criteria=criteria,
             stats=self.stats,
             use_as="multiple_series",
+            choices_based_on_time_range=True,
         )
         m2m_active = baker.make(
             "CriteriaToStatsM2M",
@@ -1112,6 +1133,7 @@ class ModelTests(TestCase):
             criteria=criteria,
             stats=self.stats,
             use_as="multiple_series",
+            choices_based_on_time_range=True,
         )
         time_since = datetime(2010, 10, 10)
         time_until = datetime(2010, 10, 14)
@@ -1132,58 +1154,65 @@ class ModelTests(TestCase):
         Test function to check DashboardStats.get_multi_time_series()
         Check results, if stats are displayed for user
         """
-        stats = baker.make(
-            "DashboardStats",
-            model_name="TestKid",
-            date_field_name="appointment",
-            model_app_name="demoproject",
-            type_operation_field_name="Sum",
-            distinct=True,
-            operation_field_name="age",
-            user_field_name="author",
-        )
-        criteria = baker.make(
-            "DashboardStatsCriteria",
-            criteria_name="name",
-            dynamic_criteria_field_name="name",
-        )
-        m2m = baker.make(
-            "CriteriaToStatsM2M",
-            criteria=criteria,
-            stats=stats,
-            use_as="multiple_series",
-        )
-        user = baker.make("User")
-        baker.make(
-            "TestKid",
-            appointment=date(2010, 10, 12),
-            name="Foo",
-            age=5,
-            author=user,
-        )
-        baker.make(
-            "TestKid",
-            appointment=date(2010, 10, 13),
-            name="Bar",
-            age=7,
-            author=user,
-        )
-        baker.make("TestKid", appointment=date(2010, 10, 13), name="Bar", age=7)
-        time_since = datetime(2010, 10, 10)
-        time_until = datetime(2010, 10, 14)
+        for choices_time_range in (True, False):
+            with self.subTest(choices_time_range):
+                stats = baker.make(
+                    "DashboardStats",
+                    model_name="TestKid",
+                    date_field_name="appointment",
+                    model_app_name="demoproject",
+                    type_operation_field_name="Sum",
+                    distinct=True,
+                    operation_field_name="age",
+                    user_field_name="author",
+                )
+                criteria = baker.make(
+                    "DashboardStatsCriteria",
+                    criteria_name="name",
+                    dynamic_criteria_field_name="name",
+                )
+                m2m = baker.make(
+                    "CriteriaToStatsM2M",
+                    criteria=criteria,
+                    stats=stats,
+                    use_as="multiple_series",
+                    choices_based_on_time_range=choices_time_range,
+                )
+                user = baker.make("User")
+                baker.make(
+                    "TestKid",
+                    appointment=date(2010, 10, 12),
+                    name="Foo",
+                    age=5,
+                    author=user,
+                )
+                baker.make(
+                    "TestKid",
+                    appointment=date(2010, 10, 13),
+                    name="Bar",
+                    age=7,
+                    author=user,
+                )
+                baker.make("TestKid", appointment=date(2010, 10, 13), name="Bar", age=7)
+                time_since = datetime(2010, 10, 10)
+                time_until = datetime(2010, 10, 14)
 
-        arguments = {"select_box_multiple_series": m2m.id}
-        serie = stats.get_multi_time_series(
-            arguments, time_since, time_until, Interval.days, None, None, user
-        )
-        testing_data = {
-            datetime(2010, 10, 10, 0, 0, tzinfo=UTC): OrderedDict((("Bar", 0), ("Foo", 0))),
-            datetime(2010, 10, 11, 0, 0, tzinfo=UTC): OrderedDict((("Bar", 0), ("Foo", 0))),
-            datetime(2010, 10, 12, 0, 0, tzinfo=UTC): OrderedDict((("Bar", None), ("Foo", 5))),
-            datetime(2010, 10, 13, 0, 0, tzinfo=UTC): OrderedDict((("Bar", 7), ("Foo", None))),
-            datetime(2010, 10, 14, 0, 0, tzinfo=UTC): OrderedDict((("Bar", 0), ("Foo", 0))),
-        }
-        self.assertDictEqual(serie, testing_data)
+                arguments = {"select_box_multiple_series": m2m.id}
+                serie = stats.get_multi_time_series(
+                    arguments, time_since, time_until, Interval.days, None, None, user
+                )
+                testing_data = {
+                    datetime(2010, 10, 10, 0, 0, tzinfo=UTC): OrderedDict((("Bar", 0), ("Foo", 0))),
+                    datetime(2010, 10, 11, 0, 0, tzinfo=UTC): OrderedDict((("Bar", 0), ("Foo", 0))),
+                    datetime(2010, 10, 12, 0, 0, tzinfo=UTC): OrderedDict(
+                        (("Bar", None), ("Foo", 5))
+                    ),
+                    datetime(2010, 10, 13, 0, 0, tzinfo=UTC): OrderedDict(
+                        (("Bar", 7), ("Foo", None))
+                    ),
+                    datetime(2010, 10, 14, 0, 0, tzinfo=UTC): OrderedDict((("Bar", 0), ("Foo", 0))),
+                }
+                self.assertDictEqual(serie, testing_data)
 
     @override_settings(USE_TZ=True, TIME_ZONE="UTC")
     def test_get_multi_series_criteria_isnull(self):
@@ -1310,12 +1339,14 @@ class ModelTests(TestCase):
             criteria=criteria,
             stats=self.stats,
             use_as="multiple_series",
+            choices_based_on_time_range=True,
         )
         baker.make(
             "CriteriaToStatsM2M",
             criteria=criteria_active,
             stats=self.stats,
             use_as="chart_filter",
+            choices_based_on_time_range=True,
         )
         baker.make(
             "User",
@@ -1765,3 +1796,46 @@ class DashboardStatsTest(TestCase):
         qs = self.dashboard_stats.get_queryset()
         self.assertEqual(qs.count(), 1)
         self.assertEqual(qs.first(), self.kid1)
+
+
+class CriteriaToStatsM2MTest(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(username="testuser", password="12345")
+
+        # Create test data using model bakery
+        self.kid1 = baker.make("TestKid", happy=True, age=10, height=140, author=self.user)
+        self.kid2 = baker.make("TestKid", happy=False, age=8, height=130, author=self.user)
+        self.kid3 = baker.make("TestKid", happy=True, age=7, height=120, author=self.user)
+
+        # Create a DashboardStats instance
+        self.dashboard_stats = DashboardStats.objects.create(
+            graph_key="test_graph",
+            graph_title="Test Graph",
+            model_app_name="demoproject",
+            model_name="TestKid",
+            date_field_name="birthday",
+        )
+
+        # Create a DashboardStatsCriteria instance
+        self.criteria = DashboardStatsCriteria.objects.create(
+            criteria_name="author",
+            dynamic_criteria_field_name="author__username",
+        )
+
+        # Create a CriteriaToStatsM2M instance
+        self.criteria_to_stats = CriteriaToStatsM2M.objects.create(
+            criteria=self.criteria,
+            stats=self.dashboard_stats,
+            order=1,
+            prefix="",
+            use_as="chart_filter",
+        )
+
+    def test_get_related_model_and_field(self):
+        model, field = self.criteria_to_stats.get_related_model_and_field("author__username")
+        self.assertEqual(model, User)
+        self.assertEqual(field, "username")
+
+        model, field = self.criteria_to_stats.get_related_model_and_field("happy")
+        self.assertEqual(model.__name__, "TestKid")
+        self.assertEqual(field, "happy")
