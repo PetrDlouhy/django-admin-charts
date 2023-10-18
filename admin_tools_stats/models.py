@@ -913,6 +913,15 @@ class CriteriaToStatsM2M(models.Model):
         query = self.stats.get_queryset().all().query
         return query.resolve_ref(field_name).field
 
+    def get_related_model_and_field(self, field_name):
+        """Traverse the field_name to get the related model and end target field."""
+        base_model = self.stats.get_queryset().model
+        fields = field_name.split("__")
+        for rel in fields[:-1]:  # omit the last segment since it's the field in the target model
+            relation = base_model._meta.get_field(rel)
+            base_model = relation.related_model
+        return base_model, fields[-1]  # returns target model and target field name
+
     @memoize(60 * 60 * 24 * 7)
     def _get_dynamic_choices(
         self,
@@ -947,39 +956,20 @@ class CriteriaToStatsM2M(models.Model):
             else:
                 choices: OrderedDict[str, Tuple[Union[str, bool, List[str]], str]] = OrderedDict()
                 fchoices: Dict[str, str] = dict(field.choices or [])
-                date_filters = {}
-                if not self.stats.cache_values:
-                    if time_since is not None:
-                        if (
-                            time_since.tzinfo is None
-                            or time_since.tzinfo.utcoffset(time_since) is None
-                        ):
-                            time_since = time_since.astimezone(get_charts_timezone())
-                        date_filters["%s__gte" % self.stats.date_field_name] = time_since
-                    if time_until is not None:
-                        if (
-                            time_until.tzinfo is None
-                            or time_until.tzinfo.utcoffset(time_until) is None
-                        ):
-                            time_until = time_until.astimezone(get_charts_timezone()).replace(
-                                hour=23, minute=59
-                            )
-                        end_time = time_until
-                        date_filters["%s__lte" % self.stats.date_field_name] = end_time
-                choices_queryset = self.stats.get_queryset().filter(
-                    **date_filters,
-                )
-                if user and not user.has_perm("admin_tools_stats.view_dashboardstats"):
-                    if not self.stats.user_field_name:
-                        raise Exception(
-                            "User field must be defined to enable charts for non-superusers"
-                        )
-                    choices_queryset = choices_queryset.filter(**{self.stats.user_field_name: user})
-                choices_queryset = choices_queryset.values_list(
-                    field_name,
+
+                # Obtain the related model and the target field dynamically from the field_name
+                related_model, target_field = self.get_related_model_and_field(field_name)
+
+                choices_queryset = related_model.objects.values_list(
+                    target_field,  # targeting the final field in the related model
                     flat=True,
                 ).distinct()
+
                 if count_limit:
+                    choices_queryset = self.stats.get_queryset().values_list(
+                        field_name,
+                        flat=True,
+                    ).distinct()
                     choices_queryset = choices_queryset.annotate(
                         f_count=self.stats.get_operation(operation_choice, operation_field_choice),
                     ).order_by(
@@ -989,7 +979,7 @@ class CriteriaToStatsM2M(models.Model):
                     other_choices_queryset: List[str] = choices_list[count_limit:]
                     choices_queryset = choices_list[:count_limit]
                 else:
-                    choices_queryset = choices_queryset.order_by(field_name)
+                    choices_queryset = choices_queryset.order_by(target_field)
                 choices.update(
                     ((i, (i, fchoices[i] if i in fchoices else i)) for i in choices_queryset),
                 )
