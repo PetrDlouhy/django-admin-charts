@@ -9,6 +9,7 @@ Changelog
 * removed support for other JSONFields than Django's native JSONField, removed ADMIN_CHARTS_USE_JSONFIELD setting
 * admin charts are loaded by JS including chart controls for quicker admin index load
 * --time-until option was added to the `recalculate_charts` management command to recalculate charts only until given date
+* CriteriaToStatsM2M.choices_based_on_time_range field changed it's meaning. Now choices are always calculated for whole time range. Value of this choice determines the way how the choices are calculated.
 
 1.3.1 (2024-04-12)
 ------------------
