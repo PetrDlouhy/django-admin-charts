@@ -75,7 +75,7 @@ class Command(BaseCommand):
             f"\t{k.ljust(30)}\t{v}"
             for (k, v) in stats_query.values_list("graph_key", "graph_title")
         )
-        print(f"recalculating charts: \n{chart_string}")
+        print(f"recalculating charts: \n{chart_string}", flush=True)
         for stats in stats_query:
             operation = stats.type_operation_field_name
             user = UserProfile.objects.get(email="petr.dlouhy@email.cz")
@@ -92,7 +92,7 @@ class Command(BaseCommand):
 
             all_multiseries_criteria = self.get_all_multiseries_criteria(stats, options)
 
-            print(f"recalculating {stats} controls")
+            print(f"recalculating {stats} controls", flush=True)
             if not options["dry_run"]:
                 stats.get_control_form_raw(user=user)
 
@@ -112,7 +112,8 @@ class Command(BaseCommand):
                     for selected_interval in time_scales:
                         print(
                             f"recalculating chart '{stats}' with '{multiseries_criteria}' on "
-                            f"'{operation_field}' criteria in {selected_interval}"
+                            f"'{operation_field}' criteria in {selected_interval}",
+                            flush=True,
                         )
                         time_since = datetime.now() - timedelta(
                             days=stats.default_time_period
