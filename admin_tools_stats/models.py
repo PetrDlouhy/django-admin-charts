@@ -988,6 +988,11 @@ class CriteriaToStatsM2M(models.Model):
                         [("other", (other_choices_queryset, "other"))],
                     )
                     choices.move_to_end("other", last=False)
+                else:
+                    choices.update(
+                        [("None", (None, None))],
+                    )
+                    choices.move_to_end("None", last=False)
                 return choices
         return None
 
