@@ -1,0 +1,431 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the PACKAGE package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: PACKAGE VERSION\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2023-09-06 18:05-0500\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: CARLOS SANTIAGO BENITEZ <ing.csbenitez@gmail.com>\n"
+"Language-Team: SPANISH <LL@li.org>\n"
+"Language: SPANISH\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#: .\admin_tools_stats\admin.py:27
+msgid "Admin Tools Stats"
+msgstr "Herramientas estadísticas"
+
+#: .\admin_tools_stats\admin.py:74
+msgid "Criteria"
+msgstr "Criterio de gráficas"
+
+#: .\admin_tools_stats\admin.py:75
+msgid "Criterias"
+msgstr "Criterios de gráficas"
+
+#: .\admin_tools_stats\admin.py:119
+msgid "Related model"
+msgstr "Modelo relacionado"
+
+#: .\admin_tools_stats\admin.py:125 .\admin_tools_stats\models.py:1012
+msgid "Time scale"
+msgstr "Escala de tiempo"
+
+#: .\admin_tools_stats\admin.py:135
+msgid "Chart type"
+msgstr "Tipo de gráfica"
+
+#: .\admin_tools_stats\apps.py:7
+msgid "Tools stats"
+msgstr "Herramientas estadísticas"
+
+#: .\admin_tools_stats\forms.py:67
+msgid "Scale"
+msgstr "Escalar"
+
+#: .\admin_tools_stats\forms.py:75
+#, fuzzy
+#| msgid "Chart type"
+msgid "Chart"
+msgstr "Tipo de gráfica"
+
+#: .\admin_tools_stats\forms.py:83
+msgid "Since"
+msgstr "Desde"
+
+#: .\admin_tools_stats\forms.py:90
+msgid "Until"
+msgstr "Hasta"
+
+#: .\admin_tools_stats\models.py:65
+msgid "Count"
+msgstr "Contar"
+
+#: .\admin_tools_stats\models.py:66
+msgid "Sum"
+msgstr "Sumar"
+
+#: .\admin_tools_stats\models.py:67
+msgid "Average"
+msgstr "Promedio"
+
+#: .\admin_tools_stats\models.py:68
+msgid "Average count per active model instance"
+msgstr "Recuento promedio por instancia de modelo activo"
+
+#: .\admin_tools_stats\models.py:69
+msgid "Max"
+msgstr "Máximo"
+
+#: .\admin_tools_stats\models.py:70
+msgid "Min"
+msgstr "Mínimo"
+
+#: .\admin_tools_stats\models.py:71
+msgid "StdDev"
+msgstr "Desviación estandar"
+
+#: .\admin_tools_stats\models.py:72
+msgid "Variance"
+msgstr "Varianza"
+
+#: .\admin_tools_stats\models.py:76
+msgid "Bar"
+msgstr "Barras"
+
+#: .\admin_tools_stats\models.py:77
+msgid "Line"
+msgstr "Lineas"
+
+#: .\admin_tools_stats\models.py:78
+msgid "Multi Bar"
+msgstr "Barras múltiples"
+
+#: .\admin_tools_stats\models.py:79
+msgid "Pie"
+msgstr "Torta"
+
+#: .\admin_tools_stats\models.py:80
+msgid "Stacked Area"
+msgstr "Área fija"
+
+#: .\admin_tools_stats\models.py:81
+msgid "Multi Bar Horizontal"
+msgstr "Barras multiples horizontales"
+
+#: .\admin_tools_stats\models.py:82
+msgid "Line Plus Bar"
+msgstr "Lineas y barras"
+
+#: .\admin_tools_stats\models.py:83
+msgid "Scatter"
+msgstr "Puntos"
+
+#: .\admin_tools_stats\models.py:84
+msgid "Cumulative Line"
+msgstr "Linea acumulativa"
+
+#: .\admin_tools_stats\models.py:85
+msgid "Line With Focus"
+msgstr "Linea con enfoque"
+
+#: .\admin_tools_stats\models.py:88
+msgid "Hours"
+msgstr "Horas"
+
+#: .\admin_tools_stats\models.py:89
+msgid "Days"
+msgstr "Días"
+
+#: .\admin_tools_stats\models.py:90
+msgid "Weeks"
+msgstr "Semanas"
+
+#: .\admin_tools_stats\models.py:91
+msgid "Months"
+msgstr "Meses"
+
+#: .\admin_tools_stats\models.py:92
+msgid "Quarters"
+msgstr "Cuartos"
+
+#: .\admin_tools_stats\models.py:93
+msgid "Years"
+msgstr "Años"
+
+#: .\admin_tools_stats\models.py:185
+msgid "criteria name"
+msgstr "Nombre del criterio"
+
+#: .\admin_tools_stats\models.py:186
+msgid "it needs to be one word unique. Ex. status, yesno"
+msgstr "Es una palabra única. Ejemplo: estado, cantidad"
+
+#: .\admin_tools_stats\models.py:191
+msgid "fixed criteria / value"
+msgstr "Valor o criterio fijo"
+
+#: .\admin_tools_stats\models.py:192
+msgid "a JSON dictionary of key-value pairs that will be used for the criteria"
+msgstr ""
+"Se indica en formato JSON donde los objetos serán usados para el criterio"
+
+#: .\admin_tools_stats\models.py:198
+msgid "dynamic criteria field name"
+msgstr "Nombre del criterio dinámico"
+
+#: .\admin_tools_stats\models.py:199
+msgid "ex. for call records - disposition"
+msgstr "Ejemplo: usuarios - cantidad"
+
+#: .\admin_tools_stats\models.py:204
+msgid "dynamic criteria / value"
+msgstr "Criterio o valor dinámico"
+
+#: .\admin_tools_stats\models.py:207
+msgid ""
+"a JSON dictionary with records in two following possible formats:<br/>"
+"\"key_value\": \"name\"<br/>\"key\": [value, \"name\"]<br/>use blank key for "
+"no filter<br/>Example:<br/><pre>{<br/>  \"\": [null, \"All\"],<br/>  \"True"
+"\": [true, \"True\"],<br/>  \"False\": [false, \"False\"]<br/>}</pre><br/"
+">Left blank to exploit all choices of CharField with choices"
+msgstr ""
+"Un diccionario JSON con campos basado en dos posibles formatos:<br/>"
+"\"key_value\": \"name\"<br/>\"key\": [value, \"name\"]<br/>Use una key en "
+"blanco para no filtrar<br/>Ejemplo:<br/><pre>{<br/>  \"\": [null, \"All\"],"
+"<br/>  \"True\": [true, \"True\"],<br/>  \"False\": [false, \"False\"]<br/>}"
+"</pre><br/>Left blank to exploit all choices of CharField with choices"
+
+#: .\admin_tools_stats\models.py:221 .\admin_tools_stats\models.py:419
+msgid "date"
+msgstr "Fecha de creación"
+
+#: .\admin_tools_stats\models.py:222
+msgid "updated_date"
+msgstr "Fecha de actualización"
+
+#: .\admin_tools_stats\models.py:234 .\admin_tools_stats\models.py:235
+msgid "dashboard stats criteria"
+msgstr "Criterios de gráficas"
+
+#: .\admin_tools_stats\models.py:262
+msgid "graph identifier"
+msgstr "Identificador de gráfica"
+
+#: .\admin_tools_stats\models.py:265
+msgid "Only small alphanumeric characters and underscore allowed."
+msgstr "Solo cacteres alfanuméricos o guiones bajos."
+
+#: .\admin_tools_stats\models.py:268
+msgid "it needs to be one word unique. ex. auth, mygraph"
+msgstr "Debe ser una palabra única. Ejemplo: migrafica, vehiculos"
+
+#: .\admin_tools_stats\models.py:273
+msgid "graph title"
+msgstr "Título"
+
+#: .\admin_tools_stats\models.py:274
+msgid "heading title of graph box"
+msgstr "Título de gráfica. Ejemplo: Cantidad de usuarios"
+
+#: .\admin_tools_stats\models.py:278
+msgid "app name"
+msgstr "Nombre de la app"
+
+#: .\admin_tools_stats\models.py:279
+msgid "ex. <i>auth</i>, <i>dialer_cdr</i>"
+msgstr "Ejemplo: <i>auth</i>, <i>ubicacion</i>"
+
+#: .\admin_tools_stats\models.py:283
+msgid "model name"
+msgstr "Nombre del modelo"
+
+#: .\admin_tools_stats\models.py:284
+msgid "ex. <i>User</i>"
+msgstr "Ejemplo: <i>User</i>"
+
+#: .\admin_tools_stats\models.py:288
+msgid "date field name"
+msgstr "Nombre del campo de fecha"
+
+#: .\admin_tools_stats\models.py:289
+msgid "ex. <i>date_joined</i>, <i>invitation__invitation_date</i>"
+msgstr "Ejemplo. <i>date_joined</i>, <i>invitation__invitation_date</i>"
+
+#: .\admin_tools_stats\models.py:293
+msgid "user field name"
+msgstr "Nombre de campo de usuario"
+
+#: .\admin_tools_stats\models.py:297
+msgid ""
+"User field that will limit chart data only for currently logged user (if not "
+"superuser)<br/>ex. owner, <i>invitation__owner</i>"
+msgstr ""
+"Campo limitado o oculto según el tipo de usuario (Si no es superusuario)<br/"
+">Ejemplo. funcionario, <i>invitation__usuario</i>"
+
+#: .\admin_tools_stats\models.py:302
+msgid "show to ordinary users"
+msgstr "Mostrar a todos los usuarios"
+
+#: .\admin_tools_stats\models.py:306
+msgid "Be carefull and test if it still doesn't expose sensitive data"
+msgstr "Tener cuidado de no exponer datos sensibles"
+
+#: .\admin_tools_stats\models.py:310
+msgid "Operate field name"
+msgstr "Campo adicional"
+
+#: .\admin_tools_stats\models.py:314
+msgid ""
+"The field you want to aggregate, ex. <i>amount</i>, "
+"<i>salaries__total_income</i>.<br/>Can contain multiple fields divided by "
+"comma."
+msgstr ""
+"Es el campo que se desea agregar (agregación), Ejemplo. <i>Cantidad</i>, "
+"<i>salaries__total_income</i>.<br/>Puede tener multiples campos divididos "
+"por una coma."
+
+#: .\admin_tools_stats\models.py:323
+msgid ""
+"Note: Distinct is supported only for <i>Count</i>, <i>Sum</i>, <i>Avg</i> "
+"and <i>'Avgerage count per active model instance'</i>.<br/>Django>=3.0 is "
+"needed for distinct <i>Sum</i> and <i>Avg</i>."
+msgstr ""
+
+#: .\admin_tools_stats\models.py:329
+msgid "cache charts values"
+msgstr "Valores de gráficos de cache"
+
+#: .\admin_tools_stats\models.py:334
+msgid ""
+"If chart's values are cached, you will always get cached values, unless you "
+"pres reload/reload_all button"
+msgstr ""
+"Si los valores del gráfico están almacenados en caché, siempre obtendrá "
+"valores almacenados en caché, a menos de que presione el botón de refrescar."
+
+#: .\admin_tools_stats\models.py:340 .\admin_tools_stats\models.py:348
+msgid "Choose Type operation"
+msgstr "Seleccione el tipo de operación"
+
+#: .\admin_tools_stats\models.py:344
+msgid "Choose the type operation what you want to aggregate."
+msgstr ""
+
+#: .\admin_tools_stats\models.py:352 .\admin_tools_stats\models.py:369
+#: .\admin_tools_stats\models.py:391
+msgid "More than one selected field will display chooser on the chart."
+msgstr "Mas de un campo seleccionado mostrará un selector en la gráfica."
+
+#: .\admin_tools_stats\models.py:356
+msgid "Default chart type"
+msgstr "Tipo de gráfica por defecto"
+
+#: .\admin_tools_stats\models.py:364
+msgid "Allowed chart types"
+msgstr "Tipos de gráfica permitidos"
+
+#: .\admin_tools_stats\models.py:372
+msgid "Default period"
+msgstr "Periodo por defecto"
+
+#: .\admin_tools_stats\models.py:373
+msgid "Number of days"
+msgstr "Número de días"
+
+#: .\admin_tools_stats\models.py:379
+msgid "Default time scale"
+msgstr "Escala de tiempo por defecto"
+
+#: .\admin_tools_stats\models.py:388
+msgid "Allowed time scales"
+msgstr "Escalas de tiempo permitidas"
+
+#: .\admin_tools_stats\models.py:395
+msgid "Y axis format"
+msgstr "Fomato de eje Y"
+
+#: .\admin_tools_stats\models.py:397
+msgid ""
+"Format of Y axis.<a href='https://github.com/d3/d3-format' "
+"target='_blank'>See description of possible values</a>."
+msgstr ""
+"Formato de eje Y.<a href='https://github.com/d3/d3-format' "
+"target='_blank'>Revisar los posibles valores</a>."
+
+#: .\admin_tools_stats\models.py:418
+msgid "visible"
+msgstr ""
+
+#: .\admin_tools_stats\models.py:425 .\admin_tools_stats\models.py:426
+msgid "dashboard stats"
+msgstr "Estadísticas"
+
+#: .\admin_tools_stats\models.py:841
+msgid "criteria field prefix"
+msgstr "Prefijo del campo de criterio"
+
+#: .\admin_tools_stats\models.py:843
+msgid "prefix, that will be added befor all lookup paths of criteria"
+msgstr "El prefijo sera añadido para realizar busquedas por criterio"
+
+#: .\admin_tools_stats\models.py:850
+msgid "Use dynamic criteria as"
+msgstr "Usar criterio dinámico como"
+
+#: .\admin_tools_stats\models.py:863
+msgid "Default filter criteria option"
+msgstr "Opción de filtro de criterio por defecto"
+
+#: .\admin_tools_stats\models.py:864
+msgid "Works only with Chart filter criteri"
+msgstr "Funciona solo con el filtro por criterio"
+
+#: .\admin_tools_stats\models.py:869
+msgid "Choices are dependend on chart time range"
+msgstr "Las opciones dependenden del rango de tiempo"
+
+#: .\admin_tools_stats\models.py:870
+msgid "Choices are not cached if this is set to true"
+msgstr "Las opciones no se guardan en cache si la opción esta marcada"
+
+#: .\admin_tools_stats\models.py:1060
+msgid "Cached Value"
+msgstr "Valor en caché"
+
+#: .\admin_tools_stats\models.py:1061
+msgid "Stored Values"
+msgstr "Valores en caché"
+
+#: .\admin_tools_stats\templates\admin_tools_stats\analytics.html:64
+msgid "No charts available, please "
+msgstr "No hay gráficas disponibles, por favor"
+
+#: .\admin_tools_stats\templates\admin_tools_stats\analytics.html:64
+msgid "configure them"
+msgstr "configure."
+
+#: .\admin_tools_stats\templates\admin_tools_stats\chart_containers.html:7
+msgid "There aren't charts for display, please setup making"
+msgstr "No hay gráficas disponibles, agregue una haciendo "
+
+#: .\admin_tools_stats\templates\admin_tools_stats\chart_form.html:36
+msgid "all"
+msgstr "Todos"
+
+#: .\admin_tools_stats\templates\admin_tools_stats\chart_form.html:39
+msgid "analytics"
+msgstr "Análisis"
+
+#, fuzzy
+#~| msgid "cache charts values"
+#~ msgid "Cached Values"
+#~ msgstr "Valores de gráficos de cache"
