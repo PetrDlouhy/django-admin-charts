@@ -37,7 +37,7 @@ class DashboardStatsCriteriaAdmin(admin.ModelAdmin):
     list_display = (
         "id",
         "criteria_name",
-        "criteria_name",
+        "criteria_fix_mapping",
         "dynamic_criteria_field_name",
         "criteria_dynamic_mapping_preview",
     )
@@ -108,7 +108,7 @@ class DashboardStatsAdmin(admin.ModelAdmin):
                 "fields": (
                     "graph_key",
                     "graph_title",
-                    ("model_app_name", "model_name", "date_field_name"),
+                    ("model_app_name", "model_name", "date_field_name", "queryset_modifiers"),
                     ("operation_field_name", "distinct"),
                     ("user_field_name", "show_to_users"),
                     ("allowed_type_operation_field_name", "type_operation_field_name"),
