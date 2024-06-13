@@ -17,6 +17,11 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser):
         parser.add_argument(
+            "--time-until",
+            help="Specify the end date for recalculation in the format 'YYYY-MM-DD'",
+            type=str,
+        )
+        parser.add_argument(
             "graph_key",
             nargs="*",
             type=str,
@@ -101,11 +106,13 @@ class Command(BaseCommand):
                     time_scales = stats.allowed_time_scales
 
                 chart_tz = get_charts_timezone()
-                for operation_field in stats.operation_field_name.split(","):
+                operation_fields = stats.operation_field_name.split(",") + [""]
+
+                for operation_field in operation_fields:
                     for selected_interval in time_scales:
                         print(
-                            f"recalculating chart {stats} with {multiseries_criteria} on "
-                            f"{operation_field} criteria in {selected_interval}"
+                            f"recalculating chart '{stats}' with '{multiseries_criteria}' on "
+                            f"'{operation_field}' criteria in {selected_interval}"
                         )
                         time_since = datetime.now() - timedelta(
                             days=stats.default_time_period
@@ -113,7 +120,12 @@ class Command(BaseCommand):
                         time_since = truncate(time_since, Interval(selected_interval).val())
                         time_since = time_since.astimezone(chart_tz)
 
-                        time_until = datetime.now()
+                        if options.get("time_until", None):
+                            time_until = datetime.strptime(
+                                options["time_until"], "%Y-%m-%d"
+                            ).replace(hour=23, minute=59, second=59)
+                        else:
+                            time_until = datetime.now()
                         time_until = truncate_ceiling(time_until, Interval(selected_interval).val())
                         time_until = time_until.astimezone(chart_tz)
 
