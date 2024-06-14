@@ -64,11 +64,20 @@ function loadAnalyticsChart(chart_key){
    if($("#chart_element_" + chart_key + ".notloaded").length)
       $('body').addClass("loading");
    $('.admin_charts').hide();
-   $("#chart_element_" + chart_key + ".notloaded").load("{% url "chart-analytics-without-key" %}" + chart_key, function(){
+   $("#chart_element_" + chart_key + ".notloaded").load("{% url "chart-analytics-without-key" %}" + chart_key + "?analytics_chart=true", function(){
       $(this).removeClass('notloaded');
       $(this).addClass('loaded');
       $(this).find('form.stateform:visible').each(loadAnchor);
       $('body').removeClass("loading");
+   });
+   $("#chart_element_" + chart_key).show();
+}
+
+function loadAdminChart(chart_key){
+   $("#chart_element_" + chart_key + ".notloaded").load("{% url "chart-analytics-without-key" %}" + chart_key, function(){
+      $(this).removeClass('notloaded');
+      $(this).addClass('loaded');
+      $(this).find('form.stateform:visible').each(loadAnchor);
    });
    $("#chart_element_" + chart_key).show();
 }
