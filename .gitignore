@@ -39,6 +39,7 @@ demoproject/static
 *nbproject*
 *devserver*
 *.idea*
+.vscode
 docs/build/*
 build/
 dist/
