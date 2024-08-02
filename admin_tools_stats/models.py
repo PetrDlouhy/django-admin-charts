@@ -30,7 +30,7 @@ from django.contrib.auth.models import AnonymousUser, User
 from django.core.exceptions import FieldError, ValidationError
 from django.core.validators import RegexValidator
 from django.db import models
-from django.db.models import ExpressionWrapper, Q
+from django.db.models import ExpressionWrapper, JSONField, Q
 from django.db.models.aggregates import Avg, Count, Max, Min, StdDev, Sum, Variance
 from django.db.models.fields import DateField, DateTimeField
 from django.db.models.functions import Trunc
@@ -53,11 +53,6 @@ def get_charts_timezone():
         return timezone.get_current_timezone()
     return None
 
-
-if getattr(settings, "ADMIN_CHARTS_USE_JSONFIELD", True):
-    from django.db.models import JSONField
-else:
-    from jsonfield.fields import JSONField  # type: ignore
 
 logger = logging.getLogger(__name__)
 

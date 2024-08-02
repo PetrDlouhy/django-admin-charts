@@ -3,17 +3,8 @@
 from __future__ import unicode_literals
 
 from django.conf import settings
-
-
-try:
-    if getattr(settings, "ADMIN_CHARTS_USE_JSONFIELD", True):
-        from django.db.models import JSONField
-    else:
-        from jsonfield.fields import JSONField
-except ImportError:
-    from jsonfield.fields import JSONField
-
 from django.db import migrations, models
+from django.db.models import JSONField
 
 
 class Migration(migrations.Migration):
