@@ -13,6 +13,7 @@ from datetime import date, datetime, timezone
 from unittest import skipIf
 
 from django.conf import settings
+from django.core.cache import cache
 from django.core.exceptions import ValidationError
 from django.db.models.aggregates import Avg, Count, Max, Min, StdDev, Sum, Variance
 from django.test import TestCase
@@ -1060,6 +1061,27 @@ class ModelTests(TestCase):
         serie = self.stats.get_multi_time_series(
             arguments, time_since, time_until, Interval.days, None, None, user
         )
+        testing_data = {  # Bar surname is filtered out
+            datetime(2010, 10, 10, 0, 0): OrderedDict((("Foo", 0),)),
+            datetime(2010, 10, 11, 0, 0): OrderedDict((("Foo", 0),)),
+            datetime(2010, 10, 12, 0, 0): OrderedDict((("Foo", 1),)),
+            datetime(2010, 10, 13, 0, 0): OrderedDict((("Foo", 0),)),
+            datetime(2010, 10, 14, 0, 0): OrderedDict((("Foo", 0),)),
+        }
+        self.assertDictEqual(serie, testing_data)
+
+        # clear cache
+        cache.clear()
+
+        baker.make(  # But one active bar user outside of the range should enable it in the chart
+            "User",
+            date_joined=date(2000, 10, 13),
+            last_name="Bar",
+            is_active=True,
+        )
+        serie = self.stats.get_multi_time_series(
+            arguments, time_since, time_until, Interval.days, None, None, user
+        )
         testing_data = {
             datetime(2010, 10, 10, 0, 0): OrderedDict((("Bar", 0), ("Foo", 0))),
             datetime(2010, 10, 11, 0, 0): OrderedDict((("Bar", 0), ("Foo", 0))),
@@ -1307,6 +1329,27 @@ class ModelTests(TestCase):
 
         arguments = {"select_box_multiple_series": m2m.id}
         user = baker.make("User", is_superuser=True)
+        serie = self.stats.get_multi_time_series(
+            arguments, time_since, time_until, Interval.days, None, None, user
+        )
+        testing_data = {  # Bar surname is filtered out
+            datetime(2010, 10, 10, 0, 0): OrderedDict((("Foo", 0),)),
+            datetime(2010, 10, 11, 0, 0): OrderedDict((("Foo", 0),)),
+            datetime(2010, 10, 12, 0, 0): OrderedDict((("Foo", 1),)),
+            datetime(2010, 10, 13, 0, 0): OrderedDict((("Foo", 0),)),
+            datetime(2010, 10, 14, 0, 0): OrderedDict((("Foo", 0),)),
+        }
+        self.assertDictEqual(serie, testing_data)
+
+        # clear cache
+        cache.clear()
+
+        baker.make(  # But one active bar user outside of the range should enable it in the chart
+            "User",
+            date_joined=date(2000, 10, 13),
+            last_name="Bar",
+            is_active=True,
+        )
         serie = self.stats.get_multi_time_series(
             arguments, time_since, time_until, Interval.days, None, None, user
         )
