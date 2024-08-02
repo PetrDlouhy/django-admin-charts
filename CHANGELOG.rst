@@ -5,6 +5,7 @@ Changelog
 ------------------
 
 * values in divided chart now are filtered by other criteria choices
+* removed support for other JSONFields than Django's native JSONField, removed ADMIN_CHARTS_USE_JSONFIELD setting
 
 1.3.1 (2024-04-12)
 ------------------
