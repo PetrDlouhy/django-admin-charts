@@ -58,7 +58,7 @@ setup(
     include_package_data=True,
     zip_safe=False,
     package_dir={"admin_tools_stats": "admin_tools_stats"},
-    packages=find_packages(),
+    packages=find_packages(exclude=["demoproject", "demoproject.*"]),
     package_data={},
     install_requires=parse_requirements("requirements.txt"),
     dependency_links=parse_dependency_links("requirements.txt"),
