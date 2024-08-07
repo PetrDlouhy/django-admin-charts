@@ -942,7 +942,6 @@ class CriteriaToStatsM2M(models.Model):
                 (
                     "If checked:<br>\n"
                     "- divide values will not be cached\n"
-                    "- divide values will change with change of time range\n"
                     "- other criteria will filter divide values\n"
                     "\n"
                     "If unchecked:\n"
