@@ -1029,10 +1029,10 @@ class CriteriaToStatsM2M(models.Model):
                     ).distinct()
                 else:
                     # Obtain the related model and the target field dynamically from the field_name
-                    related_model, field_name = self.get_related_model_and_field(field_name)
+                    related_model, related_field_name = self.get_related_model_and_field(field_name)
 
                     choices_queryset = related_model.objects.values_list(
-                        field_name,  # targeting the final field in the related model
+                        related_field_name,  # targeting the final field in the related model
                         flat=True,
                     ).distinct()
 
