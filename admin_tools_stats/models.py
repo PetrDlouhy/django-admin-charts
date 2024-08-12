@@ -1054,7 +1054,10 @@ class CriteriaToStatsM2M(models.Model):
                     other_choices_queryset: List[str] = choices_list[count_limit:]
                     choices_queryset = choices_list[:count_limit]
                 else:
-                    choices_queryset = choices_queryset.order_by(field_name)
+                    if self.choices_based_on_time_range:
+                        choices_queryset = choices_queryset.order_by(field_name)
+                    else:
+                        choices_queryset = choices_queryset.order_by(related_field_name)
                 choices.update(
                     ((i, (i, fchoices[i] if i in fchoices else i)) for i in choices_queryset),
                 )
