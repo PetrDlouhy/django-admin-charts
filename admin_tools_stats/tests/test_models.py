@@ -126,7 +126,9 @@ class DashboardStatsCriteriaTests(TestCase):
                     choices_based_on_time_range=choices_time_range,
                 )
                 result = criteria_m2m._get_dynamic_choices()
-                self.assertEqual(result, OrderedDict([("user1", ("user1", "user1"))]))
+                self.assertEqual(
+                    result, OrderedDict([("user1", ("user1", "user1")), ("None", (None, None))])
+                )
 
     def test__get_dynamic_choices_caching(self):
         """
@@ -152,7 +154,7 @@ class DashboardStatsCriteriaTests(TestCase):
                 )
                 self.assertEqual(
                     criteria_m2m._get_dynamic_choices(None, None),
-                    OrderedDict([("user1", ("user1", "user1"))]),
+                    OrderedDict([("user1", ("user1", "user1")), ("None", (None, None))]),
                 )
 
                 criteria_m2m_1 = baker.make(
@@ -164,58 +166,94 @@ class DashboardStatsCriteriaTests(TestCase):
                 )
                 self.assertEqual(
                     criteria_m2m_1._get_dynamic_choices(None, None),
-                    OrderedDict([("bar_1", ("bar_1", "bar_1"))]),
+                    OrderedDict([("bar_1", ("bar_1", "bar_1")), ("None", (None, None))]),
                 )
 
                 user2 = baker.make("User", first_name="user2", last_name="bar_2")
                 self.assertEqual(  # Value is cached, so it doesn't change
                     criteria_m2m._get_dynamic_choices(None, None),
-                    OrderedDict([("user1", ("user1", "user1"))]),
+                    OrderedDict([("user1", ("user1", "user1")), ("None", (None, None))]),
                 )
 
                 criteria_m2m.criteria.save()
                 self.assertEqual(  # Criteria save invalidates cache, so returned value changes
                     criteria_m2m._get_dynamic_choices(None, None),
-                    OrderedDict([("user1", ("user1", "user1")), ("user2", ("user2", "user2"))]),
+                    OrderedDict(
+                        [
+                            ("user1", ("user1", "user1")),
+                            ("user2", ("user2", "user2")),
+                            ("None", (None, None)),
+                        ]
+                    ),
                 )
 
                 user2.first_name = "user3"
                 user2.save()
                 self.assertEqual(  # Cache is not invalidated, so returned value doesn't change
                     criteria_m2m._get_dynamic_choices(None, None),
-                    OrderedDict([("user1", ("user1", "user1")), ("user2", ("user2", "user2"))]),
+                    OrderedDict(
+                        [
+                            ("user1", ("user1", "user1")),
+                            ("user2", ("user2", "user2")),
+                            ("None", (None, None)),
+                        ]
+                    ),
                 )
 
                 criteria_m2m.save()
                 self.assertEqual(  # Criteria save invalidates cache, so returned value changes
                     criteria_m2m._get_dynamic_choices(None, None),
-                    OrderedDict([("user1", ("user1", "user1")), ("user3", ("user3", "user3"))]),
+                    OrderedDict(
+                        [
+                            ("user1", ("user1", "user1")),
+                            ("user3", ("user3", "user3")),
+                            ("None", (None, None)),
+                        ]
+                    ),
                 )
 
                 user2.first_name = "user4"
                 user2.save()
                 self.assertEqual(  # Cache is not invalidated, so returned value doesn't change
                     criteria_m2m._get_dynamic_choices(None, None),
-                    OrderedDict([("user1", ("user1", "user1")), ("user3", ("user3", "user3"))]),
+                    OrderedDict(
+                        [
+                            ("user1", ("user1", "user1")),
+                            ("user3", ("user3", "user3")),
+                            ("None", (None, None)),
+                        ]
+                    ),
                 )
 
                 criteria_m2m.stats.save()
                 self.assertEqual(  # Criteria save invalidates cache, so returned value changes
                     criteria_m2m._get_dynamic_choices(None, None),
-                    OrderedDict([("user1", ("user1", "user1")), ("user4", ("user4", "user4"))]),
+                    OrderedDict(
+                        [
+                            ("user1", ("user1", "user1")),
+                            ("user4", ("user4", "user4")),
+                            ("None", (None, None)),
+                        ]
+                    ),
                 )
 
                 # Value for different criteria didn't invalidate the whole time
                 self.assertEqual(
                     criteria_m2m_1._get_dynamic_choices(None, None),
-                    OrderedDict([("bar_1", ("bar_1", "bar_1"))]),
+                    OrderedDict([("bar_1", ("bar_1", "bar_1")), ("None", (None, None))]),
                 )
 
                 # But now they will
                 criteria_m2m_1.save()
                 self.assertEqual(
                     criteria_m2m_1._get_dynamic_choices(None, None),
-                    OrderedDict([("bar_1", ("bar_1", "bar_1")), ("bar_2", ("bar_2", "bar_2"))]),
+                    OrderedDict(
+                        [
+                            ("bar_1", ("bar_1", "bar_1")),
+                            ("bar_2", ("bar_2", "bar_2")),
+                            ("None", (None, None)),
+                        ]
+                    ),
                 )
 
                 # Clear for next run
@@ -425,11 +463,11 @@ class ModelTests(TestCase):
             user,
         )
         testing_data = {
-            date(2010, 10, 8): {"Milos": 0},
-            date(2010, 10, 9): {"Milos": 0},
-            date(2010, 10, 10): {"Milos": 1},
-            date(2010, 10, 11): {"Milos": 0},
-            date(2010, 10, 12): {"Milos": 0},
+            date(2010, 10, 8): {"Milos": 0, None: 0},
+            date(2010, 10, 9): {"Milos": 0, None: 0},
+            date(2010, 10, 10): {"Milos": 1, None: 0},
+            date(2010, 10, 11): {"Milos": 0, None: 0},
+            date(2010, 10, 12): {"Milos": 0, None: 0},
         }
         self.assertDictEqual(serie, testing_data)
 
@@ -476,11 +514,11 @@ class ModelTests(TestCase):
             user,
         )
         testing_data = {
-            datetime(2010, 10, 8, 0, 0): {"Adam": 0, "Jirka": 0, "Petr": 0},
-            datetime(2010, 10, 9, 0, 0): {"Adam": 1, "Jirka": 0, "Petr": 0},
-            datetime(2010, 10, 10, 0, 0): {"Adam": 0, "Jirka": 0, "Petr": 1},
-            datetime(2010, 10, 11, 0, 0): {"Adam": 0, "Jirka": 0, "Petr": 0},
-            datetime(2010, 10, 12, 0, 0): {"Adam": 0, "Jirka": 0, "Petr": 0},
+            datetime(2010, 10, 8, 0, 0): {"Adam": 0, "Jirka": 0, "Petr": 0, None: 0},
+            datetime(2010, 10, 9, 0, 0): {"Adam": 1, "Jirka": 0, "Petr": 0, None: 0},
+            datetime(2010, 10, 10, 0, 0): {"Adam": 0, "Jirka": 0, "Petr": 1, None: 0},
+            datetime(2010, 10, 11, 0, 0): {"Adam": 0, "Jirka": 0, "Petr": 0, None: 0},
+            datetime(2010, 10, 12, 0, 0): {"Adam": 0, "Jirka": 0, "Petr": 0, None: 0},
         }
         self.assertDictEqual(serie, testing_data)
 
@@ -531,11 +569,11 @@ class ModelTests(TestCase):
                     user,
                 )
                 testing_data = {
-                    datetime(2010, 10, 8, 0, 0): {"other": 0, "Petr": 0},
-                    datetime(2010, 10, 9, 0, 0): {"other": 1, "Petr": 0},
-                    datetime(2010, 10, 10, 0, 0): {"other": 0, "Petr": 2},
-                    datetime(2010, 10, 11, 0, 0): {"other": 1, "Petr": 0},
-                    datetime(2010, 10, 12, 0, 0): {"other": 0, "Petr": 0},
+                    datetime(2010, 10, 8, 0, 0): {"other": 0, "Petr": 0, None: 0},
+                    datetime(2010, 10, 9, 0, 0): {"other": 1, "Petr": 0, None: 0},
+                    datetime(2010, 10, 10, 0, 0): {"other": 0, "Petr": 2, None: 0},
+                    datetime(2010, 10, 11, 0, 0): {"other": 1, "Petr": 0, None: 0},
+                    datetime(2010, 10, 12, 0, 0): {"other": 0, "Petr": 0, None: 0},
                 }
                 self.assertDictEqual(serie, testing_data)
 
@@ -1020,11 +1058,11 @@ class ModelTests(TestCase):
                     user,
                 )
                 testing_data = {
-                    datetime(2010, 10, 10, 0, 0): OrderedDict((("Bar", 0), ("Foo", 0))),
-                    datetime(2010, 10, 11, 0, 0): OrderedDict((("Bar", 0), ("Foo", 0))),
-                    datetime(2010, 10, 12, 0, 0): OrderedDict((("Bar", 0), ("Foo", 1))),
-                    datetime(2010, 10, 13, 0, 0): OrderedDict((("Bar", 1), ("Foo", 0))),
-                    datetime(2010, 10, 14, 0, 0): OrderedDict((("Bar", 0), ("Foo", 0))),
+                    datetime(2010, 10, 10, 0, 0): OrderedDict((("Bar", 0), ("Foo", 0), (None, 0))),
+                    datetime(2010, 10, 11, 0, 0): OrderedDict((("Bar", 0), ("Foo", 0), (None, 0))),
+                    datetime(2010, 10, 12, 0, 0): OrderedDict((("Bar", 0), ("Foo", 1), (None, 0))),
+                    datetime(2010, 10, 13, 0, 0): OrderedDict((("Bar", 1), ("Foo", 0), (None, 0))),
+                    datetime(2010, 10, 14, 0, 0): OrderedDict((("Bar", 0), ("Foo", 0), (None, 0))),
                 }
                 self.assertDictEqual(serie, testing_data)
 
@@ -1088,11 +1126,11 @@ class ModelTests(TestCase):
             arguments, time_since, time_until, Interval.days, None, None, user
         )
         testing_data = {  # Bar surname is filtered out
-            datetime(2010, 10, 10, 0, 0): OrderedDict((("Foo", 0),)),
-            datetime(2010, 10, 11, 0, 0): OrderedDict((("Foo", 0),)),
-            datetime(2010, 10, 12, 0, 0): OrderedDict((("Foo", 1),)),
-            datetime(2010, 10, 13, 0, 0): OrderedDict((("Foo", 0),)),
-            datetime(2010, 10, 14, 0, 0): OrderedDict((("Foo", 0),)),
+            datetime(2010, 10, 10, 0, 0): OrderedDict((("Foo", 0), (None, 0))),
+            datetime(2010, 10, 11, 0, 0): OrderedDict((("Foo", 0), (None, 0))),
+            datetime(2010, 10, 12, 0, 0): OrderedDict((("Foo", 1), (None, 0))),
+            datetime(2010, 10, 13, 0, 0): OrderedDict((("Foo", 0), (None, 0))),
+            datetime(2010, 10, 14, 0, 0): OrderedDict((("Foo", 0), (None, 0))),
         }
         self.assertDictEqual(serie, testing_data)
 
@@ -1109,11 +1147,11 @@ class ModelTests(TestCase):
             arguments, time_since, time_until, Interval.days, None, None, user
         )
         testing_data = {
-            datetime(2010, 10, 10, 0, 0): OrderedDict((("Bar", 0), ("Foo", 0))),
-            datetime(2010, 10, 11, 0, 0): OrderedDict((("Bar", 0), ("Foo", 0))),
-            datetime(2010, 10, 12, 0, 0): OrderedDict((("Bar", 0), ("Foo", 1))),
-            datetime(2010, 10, 13, 0, 0): OrderedDict((("Bar", 0), ("Foo", 0))),
-            datetime(2010, 10, 14, 0, 0): OrderedDict((("Bar", 0), ("Foo", 0))),
+            datetime(2010, 10, 10, 0, 0): OrderedDict((("Bar", 0), ("Foo", 0), (None, 0))),
+            datetime(2010, 10, 11, 0, 0): OrderedDict((("Bar", 0), ("Foo", 0), (None, 0))),
+            datetime(2010, 10, 12, 0, 0): OrderedDict((("Bar", 0), ("Foo", 1), (None, 0))),
+            datetime(2010, 10, 13, 0, 0): OrderedDict((("Bar", 0), ("Foo", 0), (None, 0))),
+            datetime(2010, 10, 14, 0, 0): OrderedDict((("Bar", 0), ("Foo", 0), (None, 0))),
         }
         self.assertDictEqual(serie, testing_data)
 
@@ -1202,15 +1240,11 @@ class ModelTests(TestCase):
                     arguments, time_since, time_until, Interval.days, None, None, user
                 )
                 testing_data = {
-                    datetime(2010, 10, 10, 0, 0, tzinfo=UTC): OrderedDict((("Bar", 0), ("Foo", 0))),
-                    datetime(2010, 10, 11, 0, 0, tzinfo=UTC): OrderedDict((("Bar", 0), ("Foo", 0))),
-                    datetime(2010, 10, 12, 0, 0, tzinfo=UTC): OrderedDict(
-                        (("Bar", None), ("Foo", 5))
-                    ),
-                    datetime(2010, 10, 13, 0, 0, tzinfo=UTC): OrderedDict(
-                        (("Bar", 7), ("Foo", None))
-                    ),
-                    datetime(2010, 10, 14, 0, 0, tzinfo=UTC): OrderedDict((("Bar", 0), ("Foo", 0))),
+                    datetime(2010, 10, 10, 0, 0, tzinfo=UTC): {"Bar": 0, "Foo": 0, None: 0},
+                    datetime(2010, 10, 11, 0, 0, tzinfo=UTC): {"Bar": 0, "Foo": 0, None: 0},
+                    datetime(2010, 10, 12, 0, 0, tzinfo=UTC): {"Bar": None, "Foo": 5, None: None},
+                    datetime(2010, 10, 13, 0, 0, tzinfo=UTC): {"Bar": 7, "Foo": None, None: None},
+                    datetime(2010, 10, 14, 0, 0, tzinfo=UTC): {"Bar": 0, "Foo": 0, None: 0},
                 }
                 self.assertDictEqual(serie, testing_data)
 
@@ -1369,11 +1403,11 @@ class ModelTests(TestCase):
             arguments, time_since, time_until, Interval.days, None, None, user
         )
         testing_data = {  # Bar surname is filtered out
-            datetime(2010, 10, 10, 0, 0): OrderedDict((("Foo", 0),)),
-            datetime(2010, 10, 11, 0, 0): OrderedDict((("Foo", 0),)),
-            datetime(2010, 10, 12, 0, 0): OrderedDict((("Foo", 1),)),
-            datetime(2010, 10, 13, 0, 0): OrderedDict((("Foo", 0),)),
-            datetime(2010, 10, 14, 0, 0): OrderedDict((("Foo", 0),)),
+            datetime(2010, 10, 10, 0, 0): OrderedDict((("Foo", 0), (None, 0))),
+            datetime(2010, 10, 11, 0, 0): OrderedDict((("Foo", 0), (None, 0))),
+            datetime(2010, 10, 12, 0, 0): OrderedDict((("Foo", 1), (None, 0))),
+            datetime(2010, 10, 13, 0, 0): OrderedDict((("Foo", 0), (None, 0))),
+            datetime(2010, 10, 14, 0, 0): OrderedDict((("Foo", 0), (None, 0))),
         }
         self.assertDictEqual(serie, testing_data)
 
@@ -1390,11 +1424,11 @@ class ModelTests(TestCase):
             arguments, time_since, time_until, Interval.days, None, None, user
         )
         testing_data = {
-            datetime(2010, 10, 10, 0, 0): OrderedDict((("Bar", 0), ("Foo", 0))),
-            datetime(2010, 10, 11, 0, 0): OrderedDict((("Bar", 0), ("Foo", 0))),
-            datetime(2010, 10, 12, 0, 0): OrderedDict((("Bar", 0), ("Foo", 1))),
-            datetime(2010, 10, 13, 0, 0): OrderedDict((("Bar", 0), ("Foo", 0))),
-            datetime(2010, 10, 14, 0, 0): OrderedDict((("Bar", 0), ("Foo", 0))),
+            datetime(2010, 10, 10, 0, 0): OrderedDict((("Bar", 0), ("Foo", 0), (None, 0))),
+            datetime(2010, 10, 11, 0, 0): OrderedDict((("Bar", 0), ("Foo", 0), (None, 0))),
+            datetime(2010, 10, 12, 0, 0): OrderedDict((("Bar", 0), ("Foo", 1), (None, 0))),
+            datetime(2010, 10, 13, 0, 0): OrderedDict((("Bar", 0), ("Foo", 0), (None, 0))),
+            datetime(2010, 10, 14, 0, 0): OrderedDict((("Bar", 0), ("Foo", 0), (None, 0))),
         }
         self.assertDictEqual(serie, testing_data)
 

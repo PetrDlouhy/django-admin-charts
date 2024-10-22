@@ -986,7 +986,7 @@ class CriteriaToStatsM2M(models.Model):
         operation_field_choice=None,
         user=None,
         queryset_filter=None,
-    ) -> "Optional[OrderedDict[str, Tuple[Union[str, bool, List[str]], str]]]":
+    ) -> "Optional[OrderedDict[str, Tuple[Union[None, str, bool, List[str]], Optional[str]]]]":
         field_name = self.get_dynamic_criteria_field_name()
         if self.criteria.criteria_dynamic_mapping:
             return OrderedDict(self.criteria.criteria_dynamic_mapping)
@@ -1009,7 +1009,9 @@ class CriteriaToStatsM2M(models.Model):
                     )
                 )
             else:
-                choices: OrderedDict[str, Tuple[Union[str, bool, List[str]], str]] = OrderedDict()
+                choices: OrderedDict[
+                    str, Tuple[Union[None, str, bool, List[str]], Optional[str]]
+                ] = OrderedDict()
                 fchoices: Dict[str, str] = dict(field.choices or [])
                 if self.choices_based_on_time_range:
                     choices_queryset = self.stats.get_queryset()
@@ -1058,6 +1060,7 @@ class CriteriaToStatsM2M(models.Model):
                 choices.update(
                     ((i, (i, fchoices[i] if i in fchoices else i)) for i in choices_queryset),
                 )
+                choices.update([("None", (None, None))])
                 if count_limit:
                     choices.update(
                         [("other", (other_choices_queryset, "other"))],
