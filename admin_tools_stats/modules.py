@@ -42,7 +42,6 @@ class DashboardChart(modules.DashboardModule):
         super(DashboardChart, self).__init__(*args, **kwargs)
         self.require_chart_jscss = kwargs["require_chart_jscss"]
         # We use this to came around current implementations of Dashboards which are query inefective
-        global stat_dict
         self.dashboard_stats = stat_dict[self.graph_key]
         self.title = self.get_title(self.graph_key)
 
