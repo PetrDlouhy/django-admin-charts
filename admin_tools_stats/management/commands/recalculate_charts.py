@@ -1,3 +1,4 @@
+import time
 from datetime import datetime, timedelta
 
 from blenderhub.apps.accounts.models import UserProfile
@@ -75,7 +76,7 @@ class Command(BaseCommand):
             f"\t{k.ljust(30)}\t{v}"
             for (k, v) in stats_query.values_list("graph_key", "graph_title")
         )
-        print(f"recalculating charts: \n{chart_string}")
+        self.stdout.write(f"recalculating charts: \n{chart_string}")
         for stats in stats_query:
             operation = stats.type_operation_field_name
             user = UserProfile.objects.get(email="petr.dlouhy@email.cz")
@@ -92,7 +93,7 @@ class Command(BaseCommand):
 
             all_multiseries_criteria = self.get_all_multiseries_criteria(stats, options)
 
-            print(f"recalculating {stats} controls")
+            self.stdout.write(f"recalculating {stats} controls")
             if not options["dry_run"]:
                 stats.get_control_form_raw(user=user)
 
@@ -110,7 +111,9 @@ class Command(BaseCommand):
 
                 for operation_field in operation_fields:
                     for selected_interval in time_scales:
-                        print(
+                        start_time = time.time()
+
+                        self.stdout.write(
                             f"recalculating chart '{stats}' with '{multiseries_criteria}' on "
                             f"'{operation_field}' criteria in {selected_interval}"
                         )
@@ -140,3 +143,7 @@ class Command(BaseCommand):
                                 operation_field_choice=operation_field,
                                 user=user,
                             )
+
+                        end_time = time.time()
+                        duration = end_time - start_time
+                        self.stdout.write(f"  -> Recalculation took {duration:.2f} seconds")
