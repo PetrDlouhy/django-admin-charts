@@ -72,7 +72,7 @@ jobs:
         with:
               python-version: ${{ matrix.python-version }}
 
-      - uses: actions/cache@v2
+      - uses: actions/cache@v4
         with:
           path: ~/.cache/pip
           key: ${{ hashFiles('setup.py') }}-${{ hashFiles('demoproject/requirements.txt') }}-${{ hashFiles('requirements.txt') }}-${{ matrix.DJANGO_VERSION_SAFE }}
