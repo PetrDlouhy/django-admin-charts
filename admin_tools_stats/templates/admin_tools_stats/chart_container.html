@@ -1,12 +1,12 @@
 {% load admin_chart_tags %}
-{% if request.GET.analytics_chart %}  {# display chart headers only on analytics page #}
+{% if request.GET.analytics_chart or display_chart_headers %}  {# display chart headers only on analytics page #}
 <div id="chart_{{ chart.graph_key }}" class="chrt_container">
 <div class="chrt_flex">
     <h3>{{ chart.graph_title }}</h3>
     {% endif %}
     {% get_control_form chart request.user as form %}
     {% include "./chart_form.html" %}
-{% if request.GET.analytics_chart %}
+{% if request.GET.analytics_chart or display_chart_headers %}
     <div id="chart_container_{{ chart.graph_key }}" class="chrt_svg_container"><svg></svg></div>
     <br/>
 </div>
