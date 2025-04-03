@@ -1,6 +1,14 @@
 Changelog
 =========
 
+1.5.0 (2025-04-03)
+------------------
+* project configuration fixes and updates
+* fix none choice in charts
+* improve output of recalculate_charts management commands - print process durations
+* fix #78: No graph on home page admin only chart header
+
+
 1.4.0 (2024-08-02)
 ------------------
 
