@@ -13,7 +13,11 @@
             loadAnalyticsChart('{{ request.GET.show }}');
          {% endif %}
          $(".change_chart_button").click(function(){
-            loadAnalyticsChart($(this).data("chart-key"));
+            const chartKey = $(this).data("chart-key");
+            const urlParams = new URLSearchParams(window.location.search);
+            urlParams.set('show', chartKey);
+            window.history.pushState({}, '', window.location.pathname + '?' + urlParams.toString());
+            loadAnalyticsChart(chartKey);
             return false;
          });
       });

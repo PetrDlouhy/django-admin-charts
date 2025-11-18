@@ -3,7 +3,84 @@ var html_string = '<svg style="width:100%;height:400px"></svg>';
 var html_string_analytics = '<svg style="width:100%;height:100%"></svg>';
 var chart_scripts = {};
 
-function loadChart(data, graph_key, reload){
+function getChartParamsFromUrl(graph_key) {
+   const urlParams = new URLSearchParams(window.location.search);
+   const params = {};
+   const prefix = graph_key + '_';
+
+   for (const [key, value] of urlParams.entries()) {
+      if (key.startsWith(prefix)) {
+         const paramName = key.substring(prefix.length);
+         if (paramName.startsWith('select_box_') || paramName.startsWith('time_')) {
+            params[paramName] = value;
+         }
+      }
+   }
+
+   return params;
+}
+
+function buildChartUrlParams(formData, graph_key) {
+   const formParams = new URLSearchParams(formData);
+   const urlParams = new URLSearchParams();
+   urlParams.set('show', graph_key);
+
+   for (const [key, value] of formParams.entries()) {
+      if (key !== 'csrfmiddlewaretoken' && key !== 'graph_key' &&
+          (key.startsWith('select_box_') || key.startsWith('time_'))) {
+         urlParams.set(graph_key + '_' + key, value);
+      }
+   }
+
+   return urlParams;
+}
+
+function updateUrlWithChartParams(graph_key, formData) {
+   const urlParams = new URLSearchParams(window.location.search);
+   const prefix = graph_key + '_';
+
+   const keysToDelete = [];
+   for (const [key, value] of urlParams.entries()) {
+      if (key.startsWith(prefix)) {
+         keysToDelete.push(key);
+      }
+   }
+   keysToDelete.forEach(key => urlParams.delete(key));
+
+   const chartParams = buildChartUrlParams(formData, graph_key);
+   chartParams.forEach((value, key) => {
+      if (key !== 'show') {
+         urlParams.set(key, value);
+      }
+   });
+
+   const newUrl = window.location.pathname + '?' + urlParams.toString();
+   window.history.replaceState({}, '', newUrl);
+}
+
+function populateFormFromUrl(form, graph_key) {
+   const params = getChartParamsFromUrl(graph_key);
+
+   for (const [key, value] of Object.entries(params)) {
+      const input = form.find('[name="' + key + '"]');
+      if (input.length > 0) {
+         input.val(value);
+      }
+   }
+}
+
+function updateAnalyticsLink(formElement, graph_key) {
+   const analyticsLink = formElement.find('a[href*="analytics"]');
+
+   if (analyticsLink.length > 0) {
+      const urlParams = buildChartUrlParams(formElement.serialize(), graph_key);
+      const baseUrl = analyticsLink.attr('href').split('?')[0];
+      const newHref = baseUrl + '?' + urlParams.toString();
+      analyticsLink.attr('href', newHref);
+   }
+}
+
+function loadChart(data, graph_key, reload, is_analytics){
    function storeToChartScripts(data_str) {
       return function(f_data, textStatus, jqXHR) {
             data.removeClass("loading");
@@ -13,6 +90,10 @@ function loadChart(data, graph_key, reload){
    };
 
    data_str = data.serialize();
+
+   if(is_analytics) {
+      updateUrlWithChartParams(graph_key, data_str);
+   }
 
    if(!reload && data_str in chart_scripts){
       data.removeClass("loading");
@@ -53,31 +134,55 @@ function loadAnchor(){
    var data = $(this).closest('form.stateform');
    data.addClass("loading");
    var graph_key = data.find(".hidden_graph_key").first().val();
-   var is_analytics = $(this).parent().hasClass("chrt_flex");
+   var is_analytics = data.closest('.chrt_flex').length > 0;
    if($(this).hasClass('select_box_chart_type') || $(this).hasClass('stateform')){
       $("#chart_container_" + graph_key).empty().append(is_analytics ? html_string_analytics : html_string);
    };
-   loadChart(data, graph_key, reload);
+
+   updateAnalyticsLink(data, graph_key);
+   loadChart(data, graph_key, reload, is_analytics);
 }
 
 function loadAnalyticsChart(chart_key){
-   if($("#chart_element_" + chart_key + ".notloaded").length)
+   const chartElement = $("#chart_element_" + chart_key);
+
+   if(chartElement.hasClass("notloaded")) {
       $('body').addClass("loading");
-   $('.admin_charts').hide();
-   $("#chart_element_" + chart_key + ".notloaded").load("{% url "chart-analytics-without-key" %}" + chart_key + "?analytics_chart=true", function(){
-      $(this).removeClass('notloaded');
-      $(this).addClass('loaded');
-      $(this).find('form.stateform:visible').each(loadAnchor);
-      $('body').removeClass("loading");
-   });
-   $("#chart_element_" + chart_key).show();
+      $('.admin_charts').hide();
+      chartElement.load("{% url "chart-analytics-without-key" %}" + chart_key + "?analytics_chart=true", function(){
+         $(this).removeClass('notloaded');
+         $(this).addClass('loaded');
+
+         const form = $(this).find('form.stateform:visible');
+         populateFormFromUrl(form, chart_key);
+         updateAnalyticsLink(form, chart_key);
+
+         form.each(loadAnchor);
+         $('body').removeClass("loading");
+      });
+   } else {
+      $('.admin_charts').hide();
+
+      const form = chartElement.find('form.stateform:visible');
+      populateFormFromUrl(form, chart_key);
+      updateAnalyticsLink(form, chart_key);
+
+      form.each(loadAnchor);
+   }
+
+   chartElement.show();
 }
 
 function loadAdminChart(chart_key){
    $("#chart_element_" + chart_key + ".notloaded").load("{% url "chart-analytics-without-key" %}" + chart_key, function(){
       $(this).removeClass('notloaded');
       $(this).addClass('loaded');
-      $(this).find('form.stateform:visible').each(loadAnchor);
+
+      const form = $(this).find('form.stateform:visible');
+      populateFormFromUrl(form, chart_key);
+      updateAnalyticsLink(form, chart_key);
+
+      form.each(loadAnchor);
    });
    $("#chart_element_" + chart_key).show();
 }
