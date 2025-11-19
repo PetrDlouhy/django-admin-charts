@@ -19,7 +19,7 @@ try:
 except ImportError:
     from backports import zoneinfo  # type: ignore
 
-from typing import Dict, List, Mapping, Optional, Tuple, Union
+from typing import Dict, List, Literal, Mapping, Optional, Tuple, Union, cast
 
 from datetime_truncate import truncate
 from dateutil.relativedelta import relativedelta
@@ -112,7 +112,7 @@ def rrule_list(
         "days": {"freq": DAILY},
         "hours": {"freq": HOURLY},
     }
-    freq = rrule_freqs[interval.value]["freq"]
+    freq = cast(Literal[0, 1, 2, 3, 4, 5, 6], rrule_freqs[interval.value]["freq"])
     rrule_interval = rrule_freqs[interval.value].get("interval", None)
     if rrule_interval:
         return list(rrule(freq=freq, interval=rrule_interval, dtstart=start, until=end))
