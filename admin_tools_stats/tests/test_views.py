@@ -564,3 +564,218 @@ class UserViewsTests(BaseUserAuthenticatedClient):
             response,
             ('{"x": 1286668800000, "y": 0}', '{"y": 0, "x": 1286668800000}'),
         )
+
+
+class CSVDownloadSuperuserTests(BaseSuperuserAuthenticatedClient):
+    def setUp(self):
+        self.stats = baker.make(
+            "DashboardStats",
+            date_field_name="date_joined",
+            model_name="User",
+            model_app_name="auth",
+            graph_key="user_graph",
+            graph_title="User Graph",
+        )
+        super().setUp()
+
+    @override_settings(USE_TZ=True, TIME_ZONE="UTC")
+    def test_csv_download_basic(self):
+        baker.make("User", date_joined=datetime(2010, 10, 10, tzinfo=timezone.utc))
+        baker.make("User", date_joined=datetime(2010, 10, 11, tzinfo=timezone.utc))
+        url = reverse("chart-csv", kwargs={"graph_key": "user_graph"})
+        url += (
+            "?time_since=2010-10-08&time_until=2010-10-12"
+            "&select_box_interval=days&select_box_chart_type=discreteBarChart"
+        )
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response["Content-Type"], "text/csv")
+        self.assertIn("attachment", response["Content-Disposition"])
+        self.assertIn("user_graph", response["Content-Disposition"])
+
+        content = response.content.decode("utf-8")
+        lines = content.strip().split("\r\n")
+        self.assertTrue(len(lines) >= 2)
+        self.assertIn("Date", lines[0])
+
+    @override_settings(USE_TZ=True, TIME_ZONE="UTC")
+    def test_csv_download_content_validation(self):
+        baker.make("User", date_joined=datetime(2010, 10, 10, tzinfo=timezone.utc))
+        url = reverse("chart-csv", kwargs={"graph_key": "user_graph"})
+        url += (
+            "?time_since=2010-10-10&time_until=2010-10-10"
+            "&select_box_interval=days&select_box_chart_type=discreteBarChart"
+        )
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+
+        content = response.content.decode("utf-8")
+        lines = content.strip().split("\r\n")
+        header = lines[0].split(",")
+        self.assertEqual(header[0], "Date")
+
+        if len(lines) > 1:
+            data_row = lines[1].split(",")
+            self.assertIn("2010-10-10", data_row[0])
+
+    @override_settings(USE_TZ=True, TIME_ZONE="UTC")
+    def test_csv_download_multiple_series(self):
+        criteria = baker.make(
+            "DashboardStatsCriteria",
+            criteria_name="active",
+            dynamic_criteria_field_name="is_active",
+            criteria_dynamic_mapping={
+                "": [None, "All"],
+                "false": [False, "Inactive"],
+                "true": [True, "Active"],
+            },
+        )
+        baker.make(
+            "CriteriaToStatsM2M",
+            criteria=criteria,
+            stats=self.stats,
+            use_as="multiple_series",
+            id=5,
+        )
+        baker.make("User", date_joined=datetime(2010, 10, 10, tzinfo=timezone.utc), is_active=True)
+        baker.make("User", date_joined=datetime(2010, 10, 10, tzinfo=timezone.utc), is_active=False)
+
+        url = reverse("chart-csv", kwargs={"graph_key": "user_graph"})
+        url += (
+            "?time_since=2010-10-08&time_until=2010-10-12"
+            "&select_box_interval=days&select_box_chart_type=discreteBarChart"
+            "&select_box_multiple_series=5"
+        )
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+
+        content = response.content.decode("utf-8")
+        lines = content.strip().split("\r\n")
+        header = lines[0]
+        self.assertIn("Date", header)
+        self.assertIn("Active", header)
+        self.assertIn("Inactive", header)
+
+    @override_settings(USE_TZ=True, TIME_ZONE="UTC")
+    def test_csv_download_with_none_series_key(self):
+        baker.make("User", date_joined=datetime(2010, 10, 10, tzinfo=timezone.utc))
+        url = reverse("chart-csv", kwargs={"graph_key": "user_graph"})
+        url += (
+            "?time_since=2010-10-08&time_until=2010-10-12"
+            "&select_box_interval=days&select_box_chart_type=discreteBarChart"
+        )
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+
+        content = response.content.decode("utf-8")
+        lines = content.strip().split("\r\n")
+        self.assertTrue(len(lines) >= 2)
+
+    @override_settings(USE_TZ=True, TIME_ZONE="UTC")
+    def test_csv_download_cached_values(self):
+        self.stats.cache_values = True
+        self.stats.save()
+
+        baker.make(
+            "CachedValue",
+            stats=self.stats,
+            time_scale="days",
+            operation=None,
+            dynamic_choices=[],
+            filtered_value="",
+            date=datetime(2010, 10, 10, tzinfo=timezone.utc),
+            value=1,
+        )
+        url = reverse("chart-csv", kwargs={"graph_key": "user_graph"})
+        url += (
+            "?time_since=2010-10-08&time_until=2010-10-12"
+            "&select_box_interval=days&select_box_chart_type=lineChart"
+        )
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response["Content-Type"], "text/csv")
+
+        content = response.content.decode("utf-8")
+        lines = content.strip().split("\r\n")
+        self.assertTrue(len(lines) >= 2)
+
+    @override_settings(USE_TZ=True, TIME_ZONE="UTC")
+    def test_csv_download_invalid_date_range(self):
+        url = reverse("chart-csv", kwargs={"graph_key": "user_graph"})
+        url += "?time_since=2010-11-08&time_until=2010-10-12"
+        with self.assertRaisesRegex(ValueError, "Time since is greater than time until"):
+            self.client.get(url)
+
+    @override_settings(USE_TZ=True, TIME_ZONE="UTC")
+    def test_csv_download_invalid_date_format(self):
+        url = reverse("chart-csv", kwargs={"graph_key": "user_graph"})
+        url += "?time_since=2010-10-08&time_until=2010-13-12"
+        with self.assertRaisesRegex(
+            ValueError, "^time data '2010-13-12' does not match format '%Y-%m-%d'$"
+        ):
+            self.client.get(url)
+
+
+class CSVDownloadUserTests(BaseUserAuthenticatedClient):
+    @override_settings(USE_TZ=True, TIME_ZONE="UTC")
+    def test_csv_download_no_permission(self):
+        baker.make(
+            "DashboardStats",
+            date_field_name="date_joined",
+            model_name="User",
+            model_app_name="auth",
+            graph_key="user_graph",
+            user_field_name=None,
+            show_to_users=False,
+        )
+        url = reverse("chart-csv", kwargs={"graph_key": "user_graph"})
+        url += (
+            "?time_since=2010-10-08&time_until=2010-10-12&select_box_interval=days"
+            "&select_box_chart_type=discreteBarChart"
+        )
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 403)
+        self.assertIn(b"Permission denied", response.content)
+
+    @override_settings(USE_TZ=True, TIME_ZONE="UTC")
+    def test_csv_download_show_to_users(self):
+        baker.make(
+            "DashboardStats",
+            date_field_name="date_joined",
+            model_name="User",
+            model_app_name="auth",
+            graph_key="user_graph",
+            user_field_name=None,
+            show_to_users=True,
+        )
+        url = reverse("chart-csv", kwargs={"graph_key": "user_graph"})
+        url += (
+            "?time_since=2010-10-08&time_until=2010-10-12&select_box_interval=days"
+            "&select_box_chart_type=discreteBarChart"
+        )
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response["Content-Type"], "text/csv")
+
+    @override_settings(USE_TZ=True, TIME_ZONE="UTC")
+    def test_csv_download_with_permission(self):
+        baker.make(
+            "DashboardStats",
+            date_field_name="date_joined",
+            model_name="User",
+            model_app_name="auth",
+            graph_key="user_graph",
+            user_field_name=None,
+            show_to_users=False,
+        )
+        permission = Permission.objects.get(codename="view_dashboardstats")
+        self.user.user_permissions.add(permission)
+
+        url = reverse("chart-csv", kwargs={"graph_key": "user_graph"})
+        url += (
+            "?time_since=2010-10-08&time_until=2010-10-12&select_box_interval=days"
+            "&select_box_chart_type=discreteBarChart"
+        )
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response["Content-Type"], "text/csv")

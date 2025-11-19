@@ -32,4 +32,5 @@
    &nbsp;<button class="reload" id="reload_all" title="reload all visible values" type="button" style="font-size:14px">⟳ all</button>
    {% endif %}
    &nbsp;<a href='{% url 'chart-analytics' %}?show={{ chart.graph_key }}' target='_blank'>analytics</a>
+   &nbsp;<a href='#' class="download-csv" data-graph-key="{{ chart.graph_key }}" title="Download chart data as CSV">📥 CSV</a>
 </form>

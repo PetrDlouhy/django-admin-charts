@@ -13,6 +13,7 @@ urlpatterns = [
         "chart_data/", views.ChartDataView.as_view(), name="chart-data"
     ),  # Only to get the base address in template, will need parameters
     path("chart_data/<str:graph_key>/", views.ChartDataView.as_view(), name="chart-data"),
+    path("chart_csv/<str:graph_key>/", views.ChartDataCSVView.as_view(), name="chart-csv"),
     path("analytics/", views.AnalyticsView.as_view(), name="chart-analytics"),
     path(
         "analytics/chart/<str:graph_key>/",

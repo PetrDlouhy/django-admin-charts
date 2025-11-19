@@ -82,11 +82,22 @@ function loadAdminChart(chart_key){
    $("#chart_element_" + chart_key).show();
 }
 
+function downloadCSV(event){
+   event.preventDefault();
+   var graph_key = $(this).data('graph-key');
+   var form = $(this).closest('form.stateform');
+   var formData = form.serialize();
+   var baseUrl = "{% url 'chart-csv' 'PLACEHOLDER' %}".replace('PLACEHOLDER', graph_key);
+   var downloadUrl = baseUrl + '?' + formData;
+   window.location.href = downloadUrl;
+}
+
 defer( function(){
    $( document ).ready(function() {
 
       $('body').on('change', '#load_on_change:checked ~ .chart-input', loadAnchor);
       $('body').on('click', '.reload', loadAnchor);
+      $('body').on('click', '.download-csv', downloadCSV);
       $('form.stateform:visible').each(loadAnchor);
    });
 });
