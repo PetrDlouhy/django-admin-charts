@@ -19,7 +19,7 @@ jobs:
   tests:
     # The type of runner that the job will run on
     runs-on: ubuntu-latest
-        
+
     strategy:
       matrix:
         DJANGO_VERSION: ['4.2.*', '5.0.*', '5.1.*']
@@ -103,14 +103,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-      - name: Install
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: '3.11'
+      - name: Install dependencies
         run: |
           pip install -r test_requirements.txt
-      - name: Running Flake8
-        run: flake8
-      - name: Running isort
-        run: python -m isort . --check-only --diff
-      - name: Running black
-        run: black --check .
-      - name: Running mypy
+      - name: Run pre-commit hooks
+        run: pre-commit run --all-files
+      - name: Run mypy
         run: mypy .

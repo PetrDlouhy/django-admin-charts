@@ -13,4 +13,3 @@ Contents:
     ./developer-doc/objects-description.rst
     ./developer-doc/modules.rst
     ./developer-doc/testing.rst
-    

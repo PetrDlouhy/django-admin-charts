@@ -7,3 +7,4 @@ types-python-dateutil
 types-backports
 django-stubs
 django_admin_tools
+pre-commit

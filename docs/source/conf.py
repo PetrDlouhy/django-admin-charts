@@ -11,13 +11,14 @@
 # All configuration values have a default; values that are commented out
 # serve to show the default.
 
-import os
-import sys
+import admin_tools_stats
 
 
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
+# import os
+# import sys
 # sys.path.insert(0, os.path.abspath('.'))
 # APP_DIR = os.path.normpath(os.path.join(os.getcwd(), '../..'))
 # sys.path.insert(0, APP_DIR)
@@ -55,9 +56,6 @@ copyright = "2011-2014, Arezqui Belaid"
 # built documents.
 #
 # The short X.Y version
-import admin_tools_stats
-
-
 version = admin_tools_stats.__version__
 # The full version, including alpha/beta/rc tags.
 release = version
