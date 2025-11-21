@@ -779,3 +779,94 @@ class CSVDownloadUserTests(BaseUserAuthenticatedClient):
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response["Content-Type"], "text/csv")
+
+
+class CachedChartsBugReproductionTests(BaseSuperuserAuthenticatedClient):
+    """
+    Reproduce the actual cached charts month labeling bug by pre-populating cache.
+
+    The bug only appears when cached values exist in the database.
+    This test successfully reproduces the bug where dates like "2024-10-31 23:00:00 UTC"
+    are shown as October instead of November (which they represent in Europe/Prague timezone).
+    """
+
+    @override_settings(
+        USE_TZ=True, TIME_ZONE="Europe/Prague", ADMIN_CHARTS_TIMEZONE="Europe/Prague"
+    )
+    def test_cached_values_with_timezone_shifted_dates(self):
+        """
+        Test that reproduces the exact bug reported:
+        Cached values stored as "2024-10-31 23:00:00" (Oct 31 23:00 UTC)
+        should be displayed as November data, not October data.
+
+        In Europe/Prague (UTC+1):
+        2024-10-31 23:00:00 UTC = 2024-11-01 00:00:00 CET (November 1st)
+
+        The bug: Chart shows this as October data because the datetime
+        says October 31, even though it represents November 1st in local time.
+        """
+        from admin_tools_stats.models import CachedValue
+
+        stats = baker.make(
+            "DashboardStats",
+            date_field_name="date_joined",
+            model_name="User",
+            model_app_name="auth",
+            graph_key="user_cached_bug",
+            cache_values=True,
+        )
+
+        baker.make(
+            CachedValue,
+            stats=stats,
+            date=datetime(2024, 10, 31, 23, 0, 0, tzinfo=timezone.utc),
+            time_scale="months",
+            operation=None,
+            dynamic_choices=[],
+            filtered_value="",
+            value=100.0,
+        )
+
+        baker.make(
+            CachedValue,
+            stats=stats,
+            date=datetime(2024, 11, 30, 23, 0, 0, tzinfo=timezone.utc),
+            time_scale="months",
+            operation=None,
+            dynamic_choices=[],
+            filtered_value="",
+            value=200.0,
+        )
+
+        url_csv = reverse("chart-csv", kwargs={"graph_key": "user_cached_bug"})
+        url_csv += (
+            "?time_since=2024-10-01&time_until=2024-12-31"
+            "&select_box_interval=months&select_box_chart_type=lineChart"
+        )
+        response_csv = self.client.get(url_csv)
+        self.assertEqual(response_csv.status_code, 200)
+
+        content = response_csv.content.decode("utf-8")
+        lines = content.strip().split("\r\n")
+
+        for line in lines[1:]:
+            if not line or ",0" in line:
+                continue
+            date_str = line.split(",")[0]
+            date_obj = datetime.strptime(date_str, "%Y-%m-%d %H:%M:%S")
+            value_str = line.split(",")[1]
+
+            if "100" in value_str:
+                self.assertEqual(
+                    date_obj.month,
+                    11,
+                    f"Value 100 is November data (Oct 31 23:00 UTC = Nov 1 00:00 CET). "
+                    f"Month should be 11, got {date_obj.month}. Date: {date_str}",
+                )
+            elif "200" in value_str:
+                self.assertEqual(
+                    date_obj.month,
+                    12,
+                    f"Value 200 is December data (Nov 30 23:00 UTC = Dec 1 00:00 CET). "
+                    f"Month should be 12, got {date_obj.month}. Date: {date_str}",
+                )
