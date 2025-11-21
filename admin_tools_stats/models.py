@@ -140,8 +140,11 @@ def transform_cached_values(values, choices_based_on_time_range: bool):
         all_filtered_values = {v["filtered_value"]: 0 for v in values}
 
     ret_dict = {}
+    chart_tz = get_charts_timezone()
     for v in values:
         date = v["date"]
+        if date.tzinfo is not None:
+            date = date.astimezone(chart_tz)
         if date not in ret_dict:
             ret_dict[date] = all_filtered_values.copy()
         if v["filtered_value"] in all_filtered_values:
