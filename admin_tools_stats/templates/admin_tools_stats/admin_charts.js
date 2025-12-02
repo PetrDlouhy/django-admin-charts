@@ -3,6 +3,34 @@ var html_string = '<svg style="width:100%;height:400px"></svg>';
 var html_string_analytics = '<svg style="width:100%;height:100%"></svg>';
 var chart_scripts = {};
 
+function cleanupChart(graph_key) {
+   d3.selectAll('.nvtooltip').remove();
+
+   const containerId = 'chart_container_' + graph_key;
+   const container = document.getElementById(containerId);
+   if (container) {
+      const svg = container.querySelector('svg');
+      if (svg) {
+         d3.select(svg).on('.zoom', null);
+         d3.select(svg).selectAll('*').on('.nv', null);
+      }
+   }
+
+   if (window.nv && window.nv.graphs) {
+      window.nv.graphs = window.nv.graphs.filter(function(g) {
+         if (!g || !g.generate) {
+            return true;
+         }
+         const chart = typeof g.generate === 'function' ? g.generate() : g.generate;
+         if (!chart || !chart.container) {
+            return true;
+         }
+         const chartContainer = typeof chart.container === 'function' ? chart.container() : chart.container;
+         return chartContainer !== container;
+      });
+   }
+}
+
 function getChartParamsFromUrl(graph_key) {
    const urlParams = new URLSearchParams(window.location.search);
    const params = {};
@@ -135,9 +163,9 @@ function loadAnchor(){
    data.addClass("loading");
    var graph_key = data.find(".hidden_graph_key").first().val();
    var is_analytics = data.closest('.chrt_flex').length > 0;
-   if($(this).hasClass('select_box_chart_type') || $(this).hasClass('stateform')){
-      $("#chart_container_" + graph_key).empty().append(is_analytics ? html_string_analytics : html_string);
-   };
+
+   cleanupChart(graph_key);
+   $("#chart_container_" + graph_key).empty().append(is_analytics ? html_string_analytics : html_string);
 
    updateAnalyticsLink(data, graph_key);
    loadChart(data, graph_key, reload, is_analytics);
