@@ -247,6 +247,7 @@ class ChartDataViewContextTests(BaseSuperuserAuthenticatedClient):
                     ],
                     "y0": [0, 1, 0, 0, 0],
                 },
+                "graph_key": "user_graph",
                 "view": chart_data_view,
             },
         )
@@ -301,6 +302,7 @@ class ChartDataViewContextTests(BaseSuperuserAuthenticatedClient):
                     ],
                     "y0": [0, 1, 1, 1, 1, 1, 0, 0],
                 },
+                "graph_key": "user_graph",
                 "view": chart_data_view,
             },
         )
@@ -356,8 +358,9 @@ class ChartDataViewContextTests(BaseSuperuserAuthenticatedClient):
                         1635980400000,
                         1636066800000,  # 2021-11-04 23:00:00 GMT
                     ],
-                    "y0": [0, 150, 160, 170, 180, 200, 0, 0],
+                    "y0": [0, 150.0, 160.0, 170.0, 180.0, 200.0, 0, 0],
                 },
+                "graph_key": "kid_graph",
                 "view": chart_data_view,
             },
         )
