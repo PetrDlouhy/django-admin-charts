@@ -214,6 +214,9 @@ class ChartDataCSVView(ChartDataMixin, View):
         series = chart_data["series"]
         time_since = chart_data["time_since"]
         time_until = chart_data["time_until"]
+        selected_interval = chart_data["selected_interval"]
+        chart_type = chart_data["chart_type"]
+        configuration = chart_data["configuration"]
 
         response = HttpResponse(content_type="text/csv")
         response["Content-Disposition"] = (
@@ -222,6 +225,42 @@ class ChartDataCSVView(ChartDataMixin, View):
         )
 
         writer = csv.writer(response)
+
+        settings_labels = [
+            "Graph Key",
+            "Graph Title",
+            "Model",
+            "Date Field",
+            "Time Since",
+            "Time Until",
+            "Interval",
+            "Chart Type",
+            "Operation",
+            "Operation Field",
+        ]
+        settings_values = [
+            dashboard_stats.graph_key,
+            dashboard_stats.graph_title,
+            f"{dashboard_stats.model_app_name}.{dashboard_stats.model_name}",
+            dashboard_stats.date_field_name,
+            time_since.strftime("%Y-%m-%d %H:%M:%S"),
+            time_until.strftime("%Y-%m-%d %H:%M:%S"),
+            selected_interval.value,
+            chart_type,
+            request.GET.get(
+                "select_box_operation", dashboard_stats.type_operation_field_name or ""
+            ),
+            request.GET.get(
+                "select_box_operation_field", dashboard_stats.operation_field_name or ""
+            ),
+        ]
+
+        for key, value in configuration.items():
+            settings_labels.append(key)
+            settings_values.append(str(value) if value else "")
+
+        writer.writerow(settings_labels)
+        writer.writerow(settings_values)
 
         serie_keys = set()
         for date_data in series.values():

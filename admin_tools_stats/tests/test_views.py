@@ -595,8 +595,42 @@ class CSVDownloadSuperuserTests(BaseSuperuserAuthenticatedClient):
 
         content = response.content.decode("utf-8")
         lines = content.strip().split("\r\n")
-        self.assertTrue(len(lines) >= 2)
-        self.assertIn("Date", lines[0])
+        self.assertTrue(len(lines) >= 4)
+        self.assertIn("Graph Key", lines[0])
+        self.assertIn("user_graph", lines[1])
+        self.assertIn("Date", lines[2])
+
+    @override_settings(USE_TZ=True, TIME_ZONE="UTC")
+    def test_csv_download_settings_headers(self):
+        baker.make("User", date_joined=datetime(2010, 10, 10, tzinfo=timezone.utc))
+        url = reverse("chart-csv", kwargs={"graph_key": "user_graph"})
+        url += (
+            "?time_since=2010-10-08&time_until=2010-10-12"
+            "&select_box_interval=days&select_box_chart_type=discreteBarChart"
+        )
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+
+        content = response.content.decode("utf-8")
+        lines = content.strip().split("\r\n")
+        settings_labels = lines[0].split(",")
+        settings_values = lines[1].split(",")
+
+        self.assertIn("Graph Key", settings_labels)
+        self.assertIn("Graph Title", settings_labels)
+        self.assertIn("Model", settings_labels)
+        self.assertIn("Date Field", settings_labels)
+        self.assertIn("Time Since", settings_labels)
+        self.assertIn("Time Until", settings_labels)
+        self.assertIn("Interval", settings_labels)
+        self.assertIn("Chart Type", settings_labels)
+
+        self.assertIn("user_graph", settings_values)
+        self.assertIn("User Graph", settings_values)
+        self.assertIn("auth.User", settings_values)
+        self.assertIn("date_joined", settings_values)
+        self.assertIn("days", settings_values)
+        self.assertIn("discreteBarChart", settings_values)
 
     @override_settings(USE_TZ=True, TIME_ZONE="UTC")
     def test_csv_download_content_validation(self):
@@ -611,11 +645,11 @@ class CSVDownloadSuperuserTests(BaseSuperuserAuthenticatedClient):
 
         content = response.content.decode("utf-8")
         lines = content.strip().split("\r\n")
-        header = lines[0].split(",")
+        header = lines[2].split(",")
         self.assertEqual(header[0], "Date")
 
-        if len(lines) > 1:
-            data_row = lines[1].split(",")
+        if len(lines) > 3:
+            data_row = lines[3].split(",")
             self.assertIn("2010-10-10", data_row[0])
 
     @override_settings(USE_TZ=True, TIME_ZONE="UTC")
@@ -651,7 +685,7 @@ class CSVDownloadSuperuserTests(BaseSuperuserAuthenticatedClient):
 
         content = response.content.decode("utf-8")
         lines = content.strip().split("\r\n")
-        header = lines[0]
+        header = lines[2]
         self.assertIn("Date", header)
         self.assertIn("Active", header)
         self.assertIn("Inactive", header)
@@ -669,7 +703,7 @@ class CSVDownloadSuperuserTests(BaseSuperuserAuthenticatedClient):
 
         content = response.content.decode("utf-8")
         lines = content.strip().split("\r\n")
-        self.assertTrue(len(lines) >= 2)
+        self.assertTrue(len(lines) >= 4)
 
     @override_settings(USE_TZ=True, TIME_ZONE="UTC")
     def test_csv_download_cached_values(self):
@@ -697,7 +731,7 @@ class CSVDownloadSuperuserTests(BaseSuperuserAuthenticatedClient):
 
         content = response.content.decode("utf-8")
         lines = content.strip().split("\r\n")
-        self.assertTrue(len(lines) >= 2)
+        self.assertTrue(len(lines) >= 4)
 
     @override_settings(USE_TZ=True, TIME_ZONE="UTC")
     def test_csv_download_invalid_date_range(self):
@@ -849,12 +883,19 @@ class CachedChartsBugReproductionTests(BaseSuperuserAuthenticatedClient):
         content = response_csv.content.decode("utf-8")
         lines = content.strip().split("\r\n")
 
-        for line in lines[1:]:
-            if not line or ",0" in line:
+        for line in lines[3:]:
+            if not line:
                 continue
-            date_str = line.split(",")[0]
+            parts = line.split(",")
+            if len(parts) < 2:
+                continue
+            date_str = parts[0]
+            value_str = parts[1]
+
+            if value_str == "0" or value_str == "0.0":
+                continue
+
             date_obj = datetime.strptime(date_str, "%Y-%m-%d %H:%M:%S")
-            value_str = line.split(",")[1]
 
             if "100" in value_str:
                 self.assertEqual(
