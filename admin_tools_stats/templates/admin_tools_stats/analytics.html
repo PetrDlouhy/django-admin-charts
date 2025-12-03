@@ -12,80 +12,257 @@
          {% if request.GET.show %}
             loadAnalyticsChart('{{ request.GET.show }}');
          {% endif %}
+
+         function closeMenu() {
+            $('#chartSidebar').removeClass('open');
+            $('#menuOverlay').removeClass('open');
+         }
+
+         $('#menuToggle').click(function() {
+            $('#chartSidebar').toggleClass('open');
+            $('#menuOverlay').toggleClass('open');
+         });
+
+         $('#menuOverlay').click(closeMenu);
+
          $(".change_chart_button").click(function(){
             const chartKey = $(this).data("chart-key");
             const urlParams = new URLSearchParams(window.location.search);
             urlParams.set('show', chartKey);
             window.history.pushState({}, '', window.location.pathname + '?' + urlParams.toString());
             loadAnalyticsChart(chartKey);
+            closeMenu();
             return false;
+         });
+
+         let resizeTimer;
+         $(window).on('resize', function() {
+            clearTimeout(resizeTimer);
+            resizeTimer = setTimeout(function() {
+               $('.admin_charts:visible form.stateform').each(function() {
+                  const $form = $(this);
+                  const graphKey = $form.find(".hidden_graph_key").first().val();
+                  if (graphKey) {
+                     cleanupChart(graphKey);
+                     $("#chart_container_" + graphKey).empty().append(html_string_analytics);
+                     loadChart($form, graphKey, false, true);
+                  }
+               });
+            }, 300);
          });
       });
    </script>
 
    <style>
-   .admin_charts {
-       padding: 0px 0px;
-   }
-   .chrt_container svg {
-        bottom: 0px !important;
-   }
-   #content, .chrt_container {
-        flex-grow: 1;
+   html {
+      height: 100%;
    }
    body {
-      position: absolute;
-      top: 0px;
-      bottom: 0px;
-   }
-   #container, .chrt_flex {
-      display: flex !important;
-      flex-direction: column !important;
-   }
-   #container, .admin_charts, .chrt_flex, .chrt_container, .chrt_svg_container {
       height: 100%;
+      margin: 0;
+      overflow: hidden;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+   }
+   #container {
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+   }
+   main {
+      flex: 1 !important;
+      min-height: 0 !important;
+      height: calc(100vh - 60px) !important;
       position: relative;
+      display: flex;
+      flex-direction: row;
+      overflow: hidden;
+   }
+   .colM {
+      flex: 1;
+      display: flex;
+      flex-direction: row;
+      min-height: 0;
+      overflow: hidden;
+   }
+   .chart-selector-sidebar {
+      width: 220px;
+      flex-shrink: 0;
+      overflow-y: auto;
+      padding: 10px;
+      background: #f8f8f8;
+      border-right: 1px solid #ddd;
+      box-sizing: border-box;
+   }
+   .chart-selector-sidebar button {
+      display: block;
+      width: 100%;
+      margin-bottom: 5px;
+      text-align: left;
+      padding: 8px 10px;
+      border: 1px solid #ccc;
+      background: white;
+      cursor: pointer;
+   }
+   .chart-selector-sidebar button:hover {
+      background: #e8f4f8;
+   }
+   .chart-content-area {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+      min-height: 0;
+      overflow-y: auto;
+   }
+
+   .breadcrumbs {
+      display: flex !important;
+      align-items: center;
+   }
+   .menu-toggle {
+      display: none;
+      padding: 6px 12px;
+      background: #417690;
+      color: white;
+      border: 1px solid rgba(255,255,255,0.3);
+      cursor: pointer;
+      font-size: 13px;
+      border-radius: 3px;
+      line-height: 1;
+      white-space: nowrap;
+   }
+   .menu-toggle:hover {
+      background: #2e5266;
+   }
+
+   @media (max-width: 768px) {
+      main {
+         height: auto !important;
+         max-height: none !important;
+         overflow: visible !important;
+      }
+      .breadcrumbs {
+         position: relative;
+      }
+      .menu-toggle {
+         display: inline-block !important;
+         position: absolute;
+         right: 10px;
+         top: -35px;
+         z-index: 100;
+      }
+      .chart-selector-sidebar {
+         position: absolute;
+         left: -240px;
+         top: 0;
+         bottom: 0;
+         width: 220px;
+         z-index: 100;
+         transition: left 0.3s ease;
+         border-right: none;
+         box-shadow: 2px 0 5px rgba(0,0,0,0.2);
+      }
+      .chart-selector-sidebar.open {
+         left: 0;
+      }
+      .menu-overlay {
+         display: none;
+         position: absolute;
+         top: 0;
+         left: 0;
+         right: 0;
+         bottom: 0;
+         background: rgba(0,0,0,0.5);
+         z-index: 99;
+      }
+      .menu-overlay.open {
+         display: block;
+      }
+      .chart-content-area {
+         width: 100%;
+      }
+   }
+   .admin_charts {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+   }
+   .chrt_container {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+   }
+   .chrt_flex {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+   }
+   .chrt_flex h3 {
+      flex-shrink: 0;
+      margin: 10px;
+   }
+   .chrt_flex form {
+      flex-shrink: 0;
+      padding: 0 10px;
+   }
+   .chrt_flex form select,
+   .chrt_flex form input[type="text"],
+   .chrt_flex form input[type="date"] {
+      max-width: 200px;
+   }
+   .chrt_svg_container {
+      flex: 1;
+      min-height: 0;
+   }
+   .chrt_svg_container svg {
+      width: 100% !important;
+      height: 100% !important;
    }
 
    .modal {
-    display:    none;
-    position:   fixed;
-    z-index:    1000;
-    top:        0;
-    left:       0;
-    height:     100%;
-    width:      100%;
-    background: rgba( 255, 255, 255, .8 )
-                url('http://i.stack.imgur.com/FhHRx.gif')
-                50% 50%
-                no-repeat;
-    }
-
-    /* When the body has the loading class, we turn
-       the scrollbar off with overflow:hidden */
-    body.loading .modal {
-        overflow: hidden;
-    }
-
-    /* Anytime the body has the loading class, our
-       modal element will be visible */
-    body.loading .modal {
-        display: block;
-    }
+      display: none;
+      position: fixed;
+      z-index: 1000;
+      top: 0;
+      left: 0;
+      height: 100%;
+      width: 100%;
+      background: rgba(255, 255, 255, .8)
+                  url('http://i.stack.imgur.com/FhHRx.gif')
+                  50% 50%
+                  no-repeat;
+   }
+   body.loading .modal {
+      overflow: hidden;
+      display: block;
+   }
    </style>
 {% endblock %}
 
 {% block content %}
-   {% for chart in nonuser_charts %}
-   <a class="change_chart_button" href="?show={{ chart.graph_key }}" data-chart-key="{{ chart.graph_key }}"><button>{{ chart.graph_title }}</button></a>
-   {% empty %}
-      <p>
-         No charts available, please <a href="{% url 'admin:admin_tools_stats_dashboardstats_changelist' %}">configure them</a>
-      </p>
-   {% endfor %}
-   {% for chart in charts %}
-   <div class="admin_charts notloaded" id="chart_element_{{ chart.graph_key }}" data-chart-key="{{ chart.graph_key }}">
+   <button class="menu-toggle" id="menuToggle">☰ Charts</button>
+   <div class="menu-overlay" id="menuOverlay"></div>
+   <div class="chart-selector-sidebar" id="chartSidebar">
+      {% for chart in nonuser_charts %}
+      <a class="change_chart_button" href="?show={{ chart.graph_key }}" data-chart-key="{{ chart.graph_key }}"><button>{{ chart.graph_title }}</button></a>
+      {% empty %}
+         <p>
+            No charts available, please <a href="{% url 'admin:admin_tools_stats_dashboardstats_changelist' %}">configure them</a>
+         </p>
+      {% endfor %}
    </div>
-   {% endfor %}
+   <div class="chart-content-area">
+      {% for chart in charts %}
+      <div class="admin_charts notloaded" id="chart_element_{{ chart.graph_key }}" data-chart-key="{{ chart.graph_key }}">
+      </div>
+      {% endfor %}
+   </div>
    <div class="modal">
 {% endblock %}
