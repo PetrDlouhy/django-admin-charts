@@ -1,6 +1,13 @@
 Changelog
 =========
 
+1.6.0 (2026-02-24)
+------------------
+* fix cached chart reload for DateField-backed series in timezone-aware mode by normalizing finality comparisons to matching date/datetime types
+* add regression tests for DateField cache reload behavior and date-key handling
+* fix test compatibility for Python 3.9 by importing ``patch`` from ``unittest.mock`` directly
+* expand CI matrix with Django 5.2/6.0 and Python 3.13 (with unsupported combinations excluded)
+
 1.5.0 (2025-04-03)
 ------------------
 * project configuration fixes and updates
