@@ -8,10 +8,10 @@
 # The Initial Developer of the Original Code is
 # Arezqui Belaid <info@star2billing.com>
 #
-import unittest
 from collections import OrderedDict
 from datetime import date, datetime, timezone
 from unittest import skipIf
+from unittest.mock import patch
 
 from django.conf import settings
 from django.contrib.auth.models import User
@@ -1876,7 +1876,7 @@ class CacheModelTests(TestCase):
         time_since = datetime(2026, 2, 21).astimezone(dj_timezone.get_current_timezone())
         time_until = datetime(2026, 2, 23).astimezone(dj_timezone.get_current_timezone())
 
-        with unittest.mock.patch.object(
+        with patch.object(
             DashboardStats,
             "get_multi_time_series",
             return_value={date(2026, 2, 22): {"": 1}},
