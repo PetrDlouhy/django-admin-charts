@@ -18,7 +18,7 @@ def _is_iterable(value):
     return isinstance(value, Iterable)
 
 
-itercompat_module.is_iterable = _is_iterable
+setattr(itercompat_module, "is_iterable", _is_iterable)
 sys.modules.setdefault("django.utils.itercompat", itercompat_module)
 
 APPLICATION_DIR = os.path.dirname(globals()["__file__"])
