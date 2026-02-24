@@ -848,13 +848,15 @@ class DashboardStats(models.Model):
                 i = 0
                 for date, values_dict in values.items():
                     for filtered_value, value in values_dict.items():
-                        is_final = (
-                            truncate(
-                                datetime.datetime.now().astimezone(get_charts_timezone()),
-                                interval.val(),
-                            )
-                            > date
+                        current_period = truncate(
+                            datetime.datetime.now().astimezone(get_charts_timezone()),
+                            interval.val(),
                         )
+                        if isinstance(date, datetime.date) and not isinstance(
+                            date, datetime.datetime
+                        ):
+                            current_period = current_period.date()
+                        is_final = current_period > date
                         bulk += [
                             CachedValue(
                                 **common_options,

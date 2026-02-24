@@ -8,6 +8,7 @@
 # The Initial Developer of the Original Code is
 # Arezqui Belaid <info@star2billing.com>
 #
+import unittest
 from collections import OrderedDict
 from datetime import date, datetime, timezone
 from unittest import skipIf
@@ -1800,6 +1801,96 @@ class CacheModelTests(TestCase):
             datetime(2010, 10, 12, 0, 0).astimezone(current_tz): {"": 1},
         }
         self.assertDictEqual(serie, testing_data)
+
+    @override_settings(USE_TZ=True, TIME_ZONE="Europe/Prague")
+    def test_get_multi_series_cached_datefield_tz(self):
+        """DateField series should work with cache + tz without datetime/date compare crash."""
+        stats = baker.make(
+            "DashboardStats",
+            date_field_name="birthday",
+            model_name="TestKid",
+            model_app_name="demoproject",
+            graph_key="kid_graph_cached",
+            cache_values=True,
+        )
+        baker.make("TestKid", birthday=date(2026, 2, 22))
+        user = baker.make("User")
+        time_since = datetime(2026, 2, 21).astimezone(dj_timezone.get_current_timezone())
+        time_until = datetime(2026, 2, 23).astimezone(dj_timezone.get_current_timezone())
+
+        serie = stats.get_multi_time_series_cached(
+            {"reload_all": "True"},
+            time_since,
+            time_until,
+            Interval.days,
+            None,
+            None,
+            user,
+        )
+        self.assertEqual(len(serie), 3)
+        self.assertEqual(sum(v[""] for v in serie.values()), 1)
+
+    @override_settings(USE_TZ=True, TIME_ZONE="Europe/Prague")
+    def test_get_multi_series_cached_datefield_marks_final_flags(self):
+        """DateField cached values are saved with is_final without type errors."""
+        stats = baker.make(
+            "DashboardStats",
+            date_field_name="birthday",
+            model_name="TestKid",
+            model_app_name="demoproject",
+            graph_key="kid_graph_cached_flags",
+            cache_values=True,
+        )
+        baker.make("TestKid", birthday=date(2026, 2, 22))
+        user = baker.make("User")
+        time_since = datetime(2026, 2, 21).astimezone(dj_timezone.get_current_timezone())
+        time_until = datetime(2026, 2, 23).astimezone(dj_timezone.get_current_timezone())
+
+        stats.get_multi_time_series_cached(
+            {"reload_all": "True"},
+            time_since,
+            time_until,
+            Interval.days,
+            None,
+            None,
+            user,
+        )
+
+        cached_values = CachedValue.objects.filter(stats=stats).order_by("date")
+        self.assertEqual(cached_values.count(), 3)
+        self.assertTrue(cached_values.filter(is_final=True).exists())
+        self.assertNotIn(None, cached_values.values_list("is_final", flat=True))
+
+    @override_settings(USE_TZ=True, TIME_ZONE="Europe/Prague")
+    def test_get_multi_series_cached_handles_date_keys_in_reload_values(self):
+        """Reload path accepts date-keyed series and compares finality safely."""
+        stats = baker.make(
+            "DashboardStats",
+            date_field_name="birthday",
+            model_name="TestKid",
+            model_app_name="demoproject",
+            graph_key="kid_graph_cached_date_keys",
+            cache_values=True,
+        )
+        user = baker.make("User")
+        time_since = datetime(2026, 2, 21).astimezone(dj_timezone.get_current_timezone())
+        time_until = datetime(2026, 2, 23).astimezone(dj_timezone.get_current_timezone())
+
+        with unittest.mock.patch.object(
+            DashboardStats,
+            "get_multi_time_series",
+            return_value={date(2026, 2, 22): {"": 1}},
+        ):
+            serie = stats.get_multi_time_series_cached(
+                {"reload_all": "True"},
+                time_since,
+                time_until,
+                Interval.days,
+                None,
+                None,
+                user,
+            )
+        self.assertEqual(len(serie), 1)
 
 
 class DashboardStatsTest(TestCase):
