@@ -2,10 +2,24 @@
 
 import os
 import sys
+import types
+from collections.abc import Iterable
 from typing import List
 
 
 DEBUG = True
+
+# django-admin-tools imports django.utils.itercompat, removed in newer Django.
+# Provide a tiny compatibility shim so demo/test project can still load apps.
+itercompat_module = types.ModuleType("django.utils.itercompat")
+
+
+def _is_iterable(value):
+    return isinstance(value, Iterable)
+
+
+itercompat_module.is_iterable = _is_iterable
+sys.modules.setdefault("django.utils.itercompat", itercompat_module)
 
 APPLICATION_DIR = os.path.dirname(globals()["__file__"])
 
