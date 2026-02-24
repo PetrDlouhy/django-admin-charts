@@ -31,11 +31,21 @@ def assertContainsAny(
     msg_prefix="",
     html=False,
 ):
-    total_count = 0
+    errors = []
     for text in texts:
-        args = self._assert_contains(response, text, status_code, msg_prefix, html)
-        real_count = args[1]
-        msg_prefix = args[2]
-        total_count += real_count
+        try:
+            self.assertContains(
+                response,
+                text,
+                status_code=status_code,
+                msg_prefix=msg_prefix,
+                html=html,
+            )
+            return
+        except AssertionError as error:
+            errors.append(str(error))
 
-    self.assertTrue(total_count != 0, f"None of the {texts} were found in the response: {response}")
+    self.fail(
+        f"None of the {texts} were found in the response. "
+        f"Assertion errors: {' | '.join(errors)}"
+    )
