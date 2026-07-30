@@ -1,9 +1,9 @@
 import time
 from datetime import datetime, timedelta
 
-from blenderhub.apps.accounts.models import UserProfile
 from datetime_truncate import truncate
-from django.core.management import BaseCommand
+from django.contrib.auth import get_user_model
+from django.core.management import BaseCommand, CommandError
 
 from admin_tools_stats.models import (
     DashboardStats,
@@ -57,6 +57,35 @@ class Command(BaseCommand):
             default=1,
             type=int,
         )
+        parser.add_argument(
+            "--user",
+            help=(
+                "Username to calculate the charts as. "
+                "Defaults to any superuser; needed because charts can be limited per user."
+            ),
+        )
+
+    def get_user(self, options):
+        """The user the charts are calculated for.
+
+        Charts can be restricted to the logged in user (``user_field_name``) and to
+        the ``view_dashboardstats`` permission, so recalculation needs someone to
+        calculate them as. Any superuser sees everything, which is what a full
+        recalculation wants.
+        """
+        user_model = get_user_model()
+        username = options.get("user", None)
+        if username:
+            try:
+                return user_model.objects.get(**{user_model.USERNAME_FIELD: username})
+            except user_model.DoesNotExist:
+                raise CommandError(f"User '{username}' does not exist")
+        user = user_model.objects.filter(is_superuser=True).order_by("pk").first()
+        if user is None:
+            raise CommandError(
+                "No superuser found to calculate the charts as, pass --user <username>"
+            )
+        return user
 
     def get_all_multiseries_criteria(self, stats, options):
         all_multiseries_criteria = list(
@@ -77,9 +106,9 @@ class Command(BaseCommand):
             for (k, v) in stats_query.values_list("graph_key", "graph_title")
         )
         self.stdout.write(f"recalculating charts: \n{chart_string}")
+        user = self.get_user(options)
         for stats in stats_query:
             operation = stats.type_operation_field_name
-            user = UserProfile.objects.get(email="petr.dlouhy@email.cz")
             configuration = {
                 "select_box_chart_type": stats.default_chart_type,
                 "reload": "True",
