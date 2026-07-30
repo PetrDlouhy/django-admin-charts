@@ -8,6 +8,7 @@
 # The Initial Developer of the Original Code is
 # Arezqui Belaid <info@star2billing.com>
 #
+import zoneinfo
 from collections import OrderedDict
 from datetime import date, datetime, timezone
 from unittest import skipIf, skipUnless
@@ -36,11 +37,6 @@ from admin_tools_stats.models import (
 )
 from demoproject.demoproject.models import TestKid
 
-
-try:
-    import zoneinfo
-except ImportError:
-    from backports import zoneinfo  # type: ignore
 
 UTC = timezone.utc
 chicago_tz = zoneinfo.ZoneInfo(key="America/Chicago")
