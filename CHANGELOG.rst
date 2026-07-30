@@ -5,6 +5,10 @@ unreleased
 ----------
 * fix Codecov uploads: replace the sunset ``codecov`` PyPI uploader (tokenless, rate-limited by the 36-job matrix) with ``codecov/codecov-action@v5``
 * ``recalculate_charts`` no longer imports a project-specific model and no longer looks up a hardcoded e-mail address; it takes ``--user`` and otherwise runs as any superuser
+* **support only currently supported versions: Python 3.10 - 3.14, Django 5.2 and 6.0.** Python 3.8/3.9 and Django 4.2/5.0/5.1 have reached end of life upstream
+* declare ``python_requires``, ``Django>=5.2`` and correct trove classifiers; ``django-bower`` moves to the ``bower`` extra and is no longer installed by default
+* drop the dead ``admin_tools_stats.charts`` (empty) and ``admin_tools_stats.utils`` (a ``Choice`` helper using Python 2 metaclass syntax, unused since the Python 3 port) modules
+* drop the ``backports.zoneinfo`` fallback and the removed ``dependency_links``/``test_suite`` setup arguments
 * add ``Median`` operation, computed by the ``PERCENTILE_CONT`` ordered-set aggregate (PostgreSQL/Oracle; raises ``NotSupportedError`` on MySQL and SQLite)
 * fix mypy failure with current django-stubs: ``check_chart_permission()`` accepts the ``AnonymousUser`` it is already called with
 * fix 500 on charts aggregating a ``DecimalField``: ``Decimal`` y values are converted to ``float`` before the series reaches ``python-nvd3``'s ``json.dumps()``

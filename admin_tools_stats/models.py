@@ -12,14 +12,8 @@ import datetime
 import enum
 import hashlib
 import logging
+import zoneinfo
 from collections import OrderedDict
-
-
-try:
-    import zoneinfo
-except ImportError:
-    from backports import zoneinfo  # type: ignore
-
 from typing import Dict, List, Literal, Mapping, Optional, Tuple, Union, cast
 
 from datetime_truncate import truncate

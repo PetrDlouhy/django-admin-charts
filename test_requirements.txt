@@ -1,10 +1,11 @@
 -r requirements.txt
+# needed by demoproject's settings, which mypy's django-stubs plugin imports
+django-bower
 flake8
 isort
 black
 mypy
 types-python-dateutil
-types-backports
 django-stubs
 django_admin_tools
 pre-commit
