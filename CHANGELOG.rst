@@ -9,6 +9,8 @@ unreleased
 * declare ``python_requires``, ``Django>=5.2`` and correct trove classifiers; ``django-bower`` moves to the ``bower`` extra and is no longer installed by default
 * drop the dead ``admin_tools_stats.charts`` (empty) and ``admin_tools_stats.utils`` (a ``Choice`` helper using Python 2 metaclass syntax, unused since the Python 3 port) modules
 * drop the ``backports.zoneinfo`` fallback and the removed ``dependency_links``/``test_suite`` setup arguments
+* report coverage with ``source`` instead of ``include``, so modules that no test imports show up as 0% instead of being absent from the report; add the missing ``management``/``commands`` ``__init__.py`` that hid the management command from it
+* cover the previously untested paths: the app label renamer, the chart control form's criteria fields, the admin analytics link and per-chart criteria queryset, ``static_or_path``, the userspace analytics template, the reload-all button and pytz-style ``ADMIN_CHARTS_TIMEZONE``
 * add ``Median`` operation, computed by the ``PERCENTILE_CONT`` ordered-set aggregate (PostgreSQL/Oracle; raises ``NotSupportedError`` on MySQL and SQLite)
 * fix mypy failure with current django-stubs: ``check_chart_permission()`` accepts the ``AnonymousUser`` it is already called with
 * fix 500 on charts aggregating a ``DecimalField``: ``Decimal`` y values are converted to ``float`` before the series reaches ``python-nvd3``'s ``json.dumps()``

@@ -278,3 +278,51 @@ class AdminToolsStatsModel(TestCase):
     def tearDown(self):
         self.dashboard_stats_criteria.delete()
         self.dashboard_stats.delete()
+
+
+class DashboardStatsAdminTests(BaseSuperuserAuthenticatedClient):
+    def setUp(self):
+        self.stats = baker.make(
+            "DashboardStats",
+            graph_title="User chart",
+            date_field_name="date_joined",
+            model_name="User",
+            model_app_name="auth",
+            graph_key="user_graph",
+        )
+        super().setUp()
+
+    def test_changelist_links_to_the_analytics_page(self):
+        """The A column links to the chart on the analytics page"""
+        response = self.client.get(reverse("admin:admin_tools_stats_dashboardstats_changelist"))
+        self.assertContains(
+            response,
+            "<a href='/admin_tools_stats/analytics/?show=user_graph' target='_blank'>A</a>",
+            html=True,
+        )
+
+    def test_change_view_offers_only_this_charts_criteria(self):
+        """default_multiseries_criteria must not offer other charts' criteria"""
+        criteria = baker.make("DashboardStatsCriteria", criteria_name="active")
+        own = baker.make(
+            "CriteriaToStatsM2M", criteria=criteria, stats=self.stats, use_as="multiple_series"
+        )
+        other_stats = baker.make(
+            "DashboardStats",
+            graph_key="other_graph",
+            model_name="User",
+            model_app_name="auth",
+            date_field_name="date_joined",
+        )
+        foreign = baker.make(
+            "CriteriaToStatsM2M", criteria=criteria, stats=other_stats, use_as="multiple_series"
+        )
+
+        url = reverse("admin:admin_tools_stats_dashboardstats_change", args=[self.stats.pk])
+        response = self.client.get(url)
+
+        queryset = (
+            response.context["adminform"].form.fields["default_multiseries_criteria"].queryset
+        )
+        self.assertIn(own, queryset)
+        self.assertNotIn(foreign, queryset)

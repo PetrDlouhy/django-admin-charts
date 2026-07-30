@@ -1699,6 +1699,80 @@ class MedianOperationTests(TestCase):
         self.assertIn("PERCENTILE_CONT", str(error.exception))
 
 
+class PytzTimezoneTests(TestCase):
+    """ADMIN_CHARTS_TIMEZONE may hold a pytz timezone, which localizes differently.
+
+    pytz timezones carry a ``zone`` attribute and require ``localize()`` instead of
+    ``astimezone()`` on a naive datetime; the series builder branches on that.
+    """
+
+    class PytzLikeTimezone:
+        """The part of the pytz interface the chart code uses."""
+
+        def __init__(self, key):
+            self.zone = key
+            self._tz = zoneinfo.ZoneInfo(key)
+
+        def localize(self, value):
+            return value.replace(tzinfo=self._tz)
+
+        def tzname(self, value):
+            return self._tz.tzname(value)
+
+    @override_settings(USE_TZ=True)
+    def test_series_dates_are_localized_with_pytz(self):
+        stats = baker.make(
+            "DashboardStats",
+            date_field_name="date_joined",
+            model_name="User",
+            model_app_name="auth",
+            graph_key="user_graph",
+        )
+        prague = self.PytzLikeTimezone("Europe/Prague")
+        user = baker.make("User", is_superuser=True)
+
+        with override_settings(ADMIN_CHARTS_TIMEZONE=prague):
+            serie = stats.get_multi_time_series(
+                {},
+                datetime(2010, 10, 8, tzinfo=timezone.utc),
+                datetime(2010, 10, 10, tzinfo=timezone.utc),
+                Interval.days,
+                None,
+                None,
+                user,
+            )
+
+        self.assertEqual(len(serie), 3)
+        for key in serie:
+            self.assertEqual(key.tzinfo, zoneinfo.ZoneInfo("Europe/Prague"))
+
+
+class ControlFormTests(TestCase):
+    def test_get_control_form_renders_the_fields(self):
+        """get_control_form() renders the chart controls as HTML"""
+        stats = baker.make(
+            "DashboardStats",
+            model_name="User",
+            model_app_name="auth",
+            date_field_name="date_joined",
+            graph_key="user_graph",
+            allowed_type_operation_field_name=[],
+        )
+        html = stats.get_control_form()
+        self.assertIn('name="graph_key"', html)
+        self.assertIn('name="time_since"', html)
+        self.assertIn('name="time_until"', html)
+
+
+class CriteriaToStatsM2MStrTests(TestCase):
+    def test_str(self):
+        """The m2m is shown as "<chart> - <criteria>" in the admin and in logs"""
+        stats = baker.make("DashboardStats", graph_title="User chart")
+        criteria = baker.make("DashboardStatsCriteria", criteria_name="active")
+        m2m = baker.make("CriteriaToStatsM2M", criteria=criteria, stats=stats)
+        self.assertEqual(str(m2m), "User chart - active")
+
+
 class GetTimeSeriesTests(TestCase):
     def setUp(self):
         self.stats = baker.make(
