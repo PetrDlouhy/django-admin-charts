@@ -1136,6 +1136,93 @@ class ModelTests(TestCase):
         "no support of USE_TZ=False in mysql",
     )
     @override_settings(USE_TZ=False)
+    def test_get_multi_series_chart_filter_blank_value(self):
+        """
+        Test function to check DashboardStats.get_multi_time_series()
+        A blank chart_filter value is the "All" option and filters nothing
+        """
+        criteria = baker.make(
+            "DashboardStatsCriteria",
+            criteria_name="name",
+            dynamic_criteria_field_name="last_name",
+        )
+        m2m = baker.make(
+            "CriteriaToStatsM2M",
+            criteria=criteria,
+            stats=self.stats,
+            use_as="chart_filter",
+        )
+        baker.make("User", date_joined=date(2010, 10, 12), last_name="Foo")
+        baker.make("User", date_joined=date(2010, 10, 12), last_name="Bar")
+        user = baker.make("User", is_superuser=True)
+
+        serie = self.stats.get_multi_time_series(
+            {"select_box_dynamic_%s" % m2m.id: ""},
+            datetime(2010, 10, 11),
+            datetime(2010, 10, 13),
+            Interval.days,
+            None,
+            None,
+            user,
+        )
+        self.assertDictEqual(
+            serie,
+            {
+                datetime(2010, 10, 11, 0, 0): {"": 0},
+                datetime(2010, 10, 12, 0, 0): {"": 2},
+                datetime(2010, 10, 13, 0, 0): {"": 0},
+            },
+        )
+
+    @skipIf(
+        settings.DATABASES["default"]["ENGINE"] == "django.db.backends.mysql",
+        "no support of USE_TZ=False in mysql",
+    )
+    @override_settings(USE_TZ=False)
+    def test_get_multi_series_chart_filter_value_outside_choices(self):
+        """
+        Test function to check DashboardStats.get_multi_time_series()
+        A chart_filter value that is not among the choices - a stale bookmarked
+        URL, or a value that dropped out of a count-limited list - is applied as
+        a plain filter value instead of raising
+        """
+        criteria = baker.make(
+            "DashboardStatsCriteria",
+            criteria_name="name",
+            dynamic_criteria_field_name="last_name",
+        )
+        m2m = baker.make(
+            "CriteriaToStatsM2M",
+            criteria=criteria,
+            stats=self.stats,
+            use_as="chart_filter",
+        )
+        baker.make("User", date_joined=date(2010, 10, 12), last_name="Foo")
+        user = baker.make("User", is_superuser=True)
+
+        serie = self.stats.get_multi_time_series(
+            {"select_box_dynamic_%s" % m2m.id: "Nobody"},
+            datetime(2010, 10, 11),
+            datetime(2010, 10, 13),
+            Interval.days,
+            None,
+            None,
+            user,
+        )
+        self.assertDictEqual(
+            serie,
+            {
+                datetime(2010, 10, 11, 0, 0): {"": 0},
+                datetime(2010, 10, 12, 0, 0): {"": 0},
+                datetime(2010, 10, 13, 0, 0): {"": 0},
+            },
+        )
+
+    @skipIf(
+        settings.DATABASES["default"]["ENGINE"] == "django.db.backends.mysql",
+        "no support of USE_TZ=False in mysql",
+    )
+    @override_settings(USE_TZ=False)
     def test_get_multi_series_criteria_combine(self):
         """
         Test function to check DashboardStats.get_multi_time_series()
