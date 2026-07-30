@@ -4,6 +4,7 @@ Changelog
 unreleased
 ----------
 * add ``Median`` operation, computed by the ``PERCENTILE_CONT`` ordered-set aggregate (PostgreSQL/Oracle; raises ``NotSupportedError`` on MySQL and SQLite)
+* fix mypy failure with current django-stubs: ``check_chart_permission()`` accepts the ``AnonymousUser`` it is already called with
 
 1.6.0 (2026-02-24)
 ------------------
