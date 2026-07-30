@@ -10,6 +10,7 @@
 #
 import datetime
 import enum
+import hashlib
 import logging
 from collections import OrderedDict
 
@@ -27,6 +28,7 @@ from dateutil.rrule import DAILY, HOURLY, MONTHLY, WEEKLY, YEARLY, rrule
 from django.apps import apps
 from django.conf import settings
 from django.contrib.auth.models import AnonymousUser, User
+from django.core.cache import cache
 from django.core.exceptions import FieldError, ValidationError
 from django.core.validators import RegexValidator
 from django.db import models
@@ -39,7 +41,6 @@ from django.dispatch import receiver
 from django.utils import timezone
 from django.utils.safestring import mark_safe
 from django.utils.translation import gettext_lazy as _
-from memoize import delete_memoized, memoize
 from multiselectfield import MultiSelectField
 
 from .aggregates import Median
@@ -987,8 +988,63 @@ class CriteriaToStatsM2M(models.Model):
             base_model = relation.related_model
         return base_model, fields[-1]  # returns target model and target field name
 
-    @memoize(60 * 60 * 24 * 7)
+    # Cached for a week; invalidated per instance by invalidate_dynamic_choices()
+    # (see the post_save handlers below). Replaces the previous
+    # @memoize(60 * 60 * 24 * 7) decorator so the package no longer depends on
+    # django-memoize - the Django cache framework is enough here.
+    _DYN_CHOICES_TTL = 60 * 60 * 24 * 7
+
+    def _dyn_choices_version(self):
+        # A per-instance version integer folded into the cache key. Bumping it
+        # invalidates every cached argument combination at once, matching the
+        # old delete_memoized(self._get_dynamic_choices) semantics.
+        return cache.get_or_set(f"admin_tools_stats:dyn_choices_ver:{self.pk}", 1, None)
+
+    def invalidate_dynamic_choices(self):
+        key = f"admin_tools_stats:dyn_choices_ver:{self.pk}"
+        try:
+            cache.incr(key)
+        except ValueError:  # key never set / expired - nothing to invalidate
+            cache.set(key, 1, None)
+
     def _get_dynamic_choices(
+        self,
+        count_limit: Optional[int] = None,
+        operation_choice=None,
+        operation_field_choice=None,
+        user=None,
+        queryset_filter=None,
+    ) -> "Optional[OrderedDict[str, Tuple[Union[None, str, bool, List[str]], Optional[str]]]]":
+        args_digest = hashlib.md5(
+            repr(
+                (
+                    count_limit,
+                    operation_choice,
+                    operation_field_choice,
+                    getattr(user, "pk", None),
+                    queryset_filter,
+                )
+            ).encode()
+        ).hexdigest()
+        cache_key = (
+            f"admin_tools_stats:dyn_choices:{self.pk}:"
+            f"{self._dyn_choices_version()}:{args_digest}"
+        )
+        missing = object()
+        cached = cache.get(cache_key, missing)
+        if cached is not missing:  # cache a None result too, like memoize did
+            return cached
+        result = self._compute_dynamic_choices(
+            count_limit,
+            operation_choice,
+            operation_field_choice,
+            user,
+            queryset_filter,
+        )
+        cache.set(cache_key, result, self._DYN_CHOICES_TTL)
+        return result
+
+    def _compute_dynamic_choices(
         self,
         count_limit: Optional[int] = None,
         operation_choice=None,
@@ -1159,15 +1215,15 @@ class CachedValue(models.Model):
 @receiver(post_save, sender=DashboardStatsCriteria)
 def clear_caches_criteria(sender, instance, **kwargs):
     for m2m in instance.criteriatostatsm2m_set.all():
-        delete_memoized(m2m._get_dynamic_choices)
+        m2m.invalidate_dynamic_choices()
 
 
 @receiver(post_save, sender=DashboardStats)
 def clear_caches_stats(sender, instance, **kwargs):
     for m2m in instance.criteriatostatsm2m_set.all():
-        delete_memoized(m2m._get_dynamic_choices)
+        m2m.invalidate_dynamic_choices()
 
 
 @receiver(post_save, sender=CriteriaToStatsM2M)
 def clear_caches_stats_m2m(sender, instance, **kwargs):
-    delete_memoized(instance._get_dynamic_choices)
+    instance.invalidate_dynamic_choices()
