@@ -7,7 +7,7 @@ from typing import Any, Dict, List, Optional, Union
 
 from datetime_truncate import truncate
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.contrib.auth.models import User
+from django.contrib.auth.models import AnonymousUser, User
 from django.http import HttpRequest, HttpResponse
 from django.views.generic import TemplateView, View
 
@@ -52,7 +52,9 @@ def remove_multiple_keys(in_dict, entries_to_remove):
 
 
 class ChartDataMixin:
-    def check_chart_permission(self, dashboard_stats: DashboardStats, user: User) -> bool:
+    def check_chart_permission(
+        self, dashboard_stats: DashboardStats, user: Union[User, AnonymousUser]
+    ) -> bool:
         return (
             user.has_perm("admin_tools_stats.view_dashboardstats") or dashboard_stats.show_to_users
         )
