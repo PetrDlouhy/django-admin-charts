@@ -1,6 +1,10 @@
 Changelog
 =========
 
+unreleased
+----------
+* add ``Median`` operation, computed by the ``PERCENTILE_CONT`` ordered-set aggregate (PostgreSQL/Oracle; raises ``NotSupportedError`` on MySQL and SQLite)
+
 1.6.0 (2026-02-24)
 ------------------
 * fix cached chart reload for DateField-backed series in timezone-aware mode by normalizing finality comparisons to matching date/datetime types
