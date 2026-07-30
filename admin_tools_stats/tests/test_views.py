@@ -630,6 +630,24 @@ class UserViewsTests(BaseUserAuthenticatedClient):
         )
 
 
+class AnalyticsUserTemplateTests(BaseUserAuthenticatedClient):
+    """Users without the dashboardstats permission get the userspace template."""
+
+    def test_analytics_page_renders_for_a_plain_user(self):
+        baker.make(
+            "DashboardStats",
+            graph_title="Kid chart",
+            date_field_name="birthday",
+            model_name="TestKid",
+            model_app_name="demoproject",
+            graph_key="kid_graph",
+            show_to_users=True,
+        )
+        response = self.client.get(reverse("chart-analytics"))
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "admin_tools_stats/analytics_user.html")
+
+
 class CSVDownloadSuperuserTests(BaseSuperuserAuthenticatedClient):
     def setUp(self):
         self.stats = baker.make(

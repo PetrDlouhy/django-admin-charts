@@ -1,9 +1,12 @@
 [run]
+# `source` (unlike `include`) also reports modules that no test ever imported -
+# without it a module with no tests at all is simply absent from the report
+# instead of showing up as 0%
+source = admin_tools_stats
 omit =
    */virtualenvs/*,
    */migrations/*,
    */site-packages/*
-include = admin_tools_stats/*
 plugins =
     django_coverage_plugin
 branch = True
