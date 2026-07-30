@@ -5,6 +5,7 @@ unreleased
 ----------
 * add ``Median`` operation, computed by the ``PERCENTILE_CONT`` ordered-set aggregate (PostgreSQL/Oracle; raises ``NotSupportedError`` on MySQL and SQLite)
 * fix mypy failure with current django-stubs: ``check_chart_permission()`` accepts the ``AnonymousUser`` it is already called with
+* fix 500 on charts aggregating a ``DecimalField``: ``Decimal`` y values are converted to ``float`` before the series reaches ``python-nvd3``'s ``json.dumps()``
 
 1.6.0 (2026-02-24)
 ------------------

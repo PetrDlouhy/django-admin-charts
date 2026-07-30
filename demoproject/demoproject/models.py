@@ -12,6 +12,7 @@ class TestKid(models.Model):
     height = models.IntegerField(null=True)
     bio = models.TextField()
     wanted_games_qtd = models.BigIntegerField()
+    pocket_money = models.DecimalField(max_digits=10, decimal_places=2, null=True)
     birthday = models.DateField(null=True)
     appointment = models.DateTimeField(null=True)
     author = models.ForeignKey(
