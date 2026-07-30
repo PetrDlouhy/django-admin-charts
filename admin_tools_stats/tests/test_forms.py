@@ -130,3 +130,18 @@ class ChartSettingsFormTests(TestCase):
         ch = ChartSettingsForm(stats)
 
         self.assertNotIn(f"select_box_dynamic_{chart_filter.id}", ch.fields)
+
+    def test_chart_without_allowed_operations(self):
+        """allowed_type_operation_field_name is nullable and has no default"""
+        stats = baker.make(
+            "DashboardStats",
+            model_name="User",
+            model_app_name="auth",
+            date_field_name="date_joined",
+        )
+        self.assertIsNone(stats.allowed_type_operation_field_name)
+
+        ch = ChartSettingsForm(stats)
+
+        self.assertNotIn("select_box_operation", ch.fields)
+        self.assertIn("time_since", ch.fields)

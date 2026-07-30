@@ -42,7 +42,7 @@ class DashboardChart(modules.DashboardModule):
         super(DashboardChart, self).__init__(*args, **kwargs)
         self.require_chart_jscss = kwargs["require_chart_jscss"]
         # We use this to came around current implementations of Dashboards which are query inefective
-        self.dashboard_stats = stat_dict[self.graph_key]
+        self.dashboard_stats = stat_dict.get(self.graph_key, None)
         self.title = self.get_title(self.graph_key)
 
     def init_with_context(self, context):
@@ -65,11 +65,10 @@ class DashboardChart(modules.DashboardModule):
 
     def get_title(self, graph_key):
         """Returns graph title"""
-        try:
-            return self.dashboard_stats.graph_title
-        except LookupError as e:
-            self.error_message = str(e)
+        if self.dashboard_stats is None:
+            self.error_message = f"chart '{graph_key}' does not exist or is not visible"
             return ""
+        return self.dashboard_stats.graph_title
 
 
 def get_active_graph():

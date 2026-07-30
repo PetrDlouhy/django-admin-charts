@@ -46,7 +46,8 @@ class ChartSettingsForm(forms.Form):
                 "class"
             ] = "chart-input select_box_multiple_series"
 
-        if len(stats.allowed_type_operation_field_name) > 1:
+        # the field is nullable and has no default, unlike the other allowed_* ones
+        if len(stats.allowed_type_operation_field_name or []) > 1:
             self.fields["select_box_operation"] = forms.ChoiceField(
                 choices=stats.allowed_type_operation_field_name_choices(),
                 label="Operation",
