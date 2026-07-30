@@ -42,6 +42,8 @@ from django.utils.translation import gettext_lazy as _
 from memoize import delete_memoized, memoize
 from multiselectfield import MultiSelectField
 
+from .aggregates import Median
+
 
 def get_charts_timezone():
     timezn = getattr(settings, "ADMIN_CHARTS_TIMEZONE", None)
@@ -60,6 +62,7 @@ operation = (
     ("Count", "Count"),
     ("Sum", "Sum"),
     ("Avg", "Avgerage"),
+    ("Median", "Median"),
     ("AvgCountPerInstance", "Avgerage count per active model instance"),
     ("Max", "Max"),
     ("Min", "Min"),
@@ -543,6 +546,7 @@ class DashboardStats(models.Model):
             "Avg": lambda field_name, distinct, dkwargs: Avg(
                 field_name, distinct=distinct, filter=dkwargs
             ),
+            "Median": lambda field_name, distinct, dkwargs: Median(field_name, filter=dkwargs),
             "StdDev": lambda field_name, distinct, dkwargs: StdDev(field_name, filter=dkwargs),
             "Max": lambda field_name, distinct, dkwargs: Max(field_name, filter=dkwargs),
             "Min": lambda field_name, distinct, dkwargs: Min(field_name, filter=dkwargs),

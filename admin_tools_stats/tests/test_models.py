@@ -10,19 +10,22 @@
 #
 from collections import OrderedDict
 from datetime import date, datetime, timezone
-from unittest import skipIf
+from unittest import skipIf, skipUnless
 from unittest.mock import patch
 
 from django.conf import settings
 from django.contrib.auth.models import User
 from django.core.cache import cache
 from django.core.exceptions import ValidationError
+from django.db import connection
 from django.db.models.aggregates import Avg, Count, Max, Min, StdDev, Sum, Variance
+from django.db.utils import NotSupportedError
 from django.test import TestCase
 from django.test.utils import override_settings
 from django.utils import timezone as dj_timezone
 from model_bakery import baker
 
+from admin_tools_stats.aggregates import Median
 from admin_tools_stats.models import (
     CachedValue,
     CriteriaToStatsM2M,
@@ -356,6 +359,7 @@ class ModelTests(TestCase):
         self.assertEqual(stats.get_operation("Max", ""), Max("age"))
         self.assertEqual(stats.get_operation("Min", ""), Min("age"))
         self.assertEqual(stats.get_operation("Variance", ""), Variance("age", filter=None))
+        self.assertEqual(stats.get_operation("Median", ""), Median("age", filter=None))
         self.assertEqual(
             str(stats.get_operation("AvgCountPerInstance", "")),
             "ExpressionWrapper(Value(1.0) * Count(F(age)) / Count(F(id), "
@@ -1494,6 +1498,65 @@ class ModelTests(TestCase):
             truncate_ceiling(date, "year"),
             datetime(2022, 12, 31, 23, 59, 59, 999999, tzinfo=chicago_tz),
         )
+
+
+class MedianOperationTests(TestCase):
+    """Median is computed by the SQL PERCENTILE_CONT ordered-set aggregate."""
+
+    def setUp(self):
+        self.stats = baker.make(
+            "DashboardStats",
+            model_name="TestKid",
+            date_field_name="birthday",
+            model_app_name="demoproject",
+            graph_key="kid_median_graph",
+            type_operation_field_name="Median",
+            operation_field_name="age",
+        )
+        self.user = baker.make("User")
+
+    def get_median(self, ages):
+        for age in ages:
+            baker.make("TestKid", birthday=date(2010, 10, 10), age=age)
+        serie = self.stats.get_multi_time_series(
+            {},
+            datetime(2010, 10, 9),
+            datetime(2010, 10, 10),
+            Interval.days,
+            None,
+            None,
+            self.user,
+        )
+        return serie[date(2010, 10, 10)][""]
+
+    @skipUnless(connection.vendor == "postgresql", "PERCENTILE_CONT needs PostgreSQL")
+    @override_settings(USE_TZ=False)
+    def test_median_odd_count(self):
+        self.assertEqual(self.get_median([12, 1, 2]), 2.0)
+
+    @skipUnless(connection.vendor == "postgresql", "PERCENTILE_CONT needs PostgreSQL")
+    @override_settings(USE_TZ=False)
+    def test_median_even_count_interpolates(self):
+        """The continuous percentile interpolates between the two middle values"""
+        self.assertEqual(self.get_median([12, 1, 2, 3]), 2.5)
+
+    @skipUnless(connection.vendor == "postgresql", "PERCENTILE_CONT needs PostgreSQL")
+    @override_settings(USE_TZ=False)
+    def test_median_is_not_skewed_by_outlier(self):
+        """What Median is for: one extreme value moves Avg but not Median"""
+        ages = [1, 2, 3, 4, 500]
+        self.assertEqual(self.get_median(ages), 3.0)
+        self.stats.type_operation_field_name = "Avg"
+        self.stats.save()
+        self.assertEqual(self.get_median([]), 102.0)
+
+    @skipIf(connection.vendor == "postgresql", "PostgreSQL does support PERCENTILE_CONT")
+    @override_settings(USE_TZ=False)
+    def test_median_unsupported_backend(self):
+        """Backends without PERCENTILE_CONT fail loudly instead of guessing"""
+        with self.assertRaises(NotSupportedError) as error:
+            self.get_median([12, 1, 2])
+        self.assertIn("PERCENTILE_CONT", str(error.exception))
 
 
 class GetTimeSeriesTests(TestCase):
