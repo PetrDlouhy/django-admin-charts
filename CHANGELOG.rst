@@ -4,6 +4,7 @@ Changelog
 unreleased
 ----------
 * fix Codecov uploads: replace the sunset ``codecov`` PyPI uploader (tokenless, rate-limited by the 36-job matrix) with ``codecov/codecov-action@v5``
+* ``recalculate_charts`` no longer imports a project-specific model and no longer looks up a hardcoded e-mail address; it takes ``--user`` and otherwise runs as any superuser
 * add ``Median`` operation, computed by the ``PERCENTILE_CONT`` ordered-set aggregate (PostgreSQL/Oracle; raises ``NotSupportedError`` on MySQL and SQLite)
 * fix mypy failure with current django-stubs: ``check_chart_permission()`` accepts the ``AnonymousUser`` it is already called with
 * fix 500 on charts aggregating a ``DecimalField``: ``Decimal`` y values are converted to ``float`` before the series reaches ``python-nvd3``'s ``json.dumps()``
