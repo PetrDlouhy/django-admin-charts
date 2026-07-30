@@ -99,7 +99,6 @@ jobs:
            pip install --upgrade --upgrade-strategy eager -r demoproject/requirements.txt
            pip install --upgrade --upgrade-strategy eager -r requirements.txt
            pip install --pre Django=='${{ matrix.DJANGO_VERSION }}'
-           pip install codecov
 
       - name: Testing
         run: |
@@ -108,13 +107,22 @@ jobs:
           fi
           python manage.py makemigrations --check --dry-run
           python -W error::DeprecationWarning -m coverage run manage.py test
-          coverage xml && codecov
+          coverage xml
         env:
           POSTGRES_HOST: localhost
           POSTGRES_PORT: 5432
           MYSQL_PASSWORD: rootpassword
           MYSQL_USER: root
           DB_ENGINE: ${{ matrix.DB_ENGINE }}
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: ./coverage.xml
+          flags: ${{ matrix.DB_ENGINE }}
+          # a Codecov outage must not fail the test matrix
+          fail_ci_if_error: false
   lint:
     runs-on: ubuntu-latest
     steps:
