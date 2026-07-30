@@ -3,6 +3,7 @@ import logging
 import time
 from collections import OrderedDict
 from datetime import datetime
+from decimal import Decimal
 from typing import Any, Dict, List, Optional, Union
 
 from datetime_truncate import truncate
@@ -49,6 +50,22 @@ def get_dateformat(interval: Interval, chart_type):
 def remove_multiple_keys(in_dict, entries_to_remove):
     for k in entries_to_remove:
         in_dict.pop(k, None)
+
+
+def json_serializable_value(value):
+    """Make a single aggregated y value safe for the chart's JSON serialization.
+
+    ``Sum``/``Avg`` over a ``DecimalField`` return ``Decimal``, which
+    ``python-nvd3`` cannot serialize: it does a plain ``json.dumps()`` on the
+    series, and the stdlib encoder has no rule for ``Decimal``. The failure
+    happens while the template renders, i.e. outside the ``try`` block that
+    turns data errors into a readable chart error, so it surfaces as a 500.
+    """
+    if not value:
+        return 0
+    if isinstance(value, Decimal):
+        return float(value)
+    return value
 
 
 class ChartDataMixin:
@@ -155,7 +172,7 @@ class ChartDataView(ChartDataMixin, TemplateView):
         selected_interval = chart_data["selected_interval"]
         context["chart_type"] = chart_data["chart_type"]
 
-        ydata_serie: Dict[str, List[int]] = {}
+        ydata_serie: Dict[str, List[Union[int, float]]] = {}
         names = {}
         xdata = []
         serie_i_map: Dict[str, int] = OrderedDict()
@@ -171,7 +188,7 @@ class ChartDataView(ChartDataMixin, TemplateView):
                 if y_key not in ydata_serie:
                     ydata_serie[y_key] = []
                     names["name%i" % serie_i_map[key]] = str(key)
-                ydata_serie[y_key].append(value if value else 0)
+                ydata_serie[y_key].append(json_serializable_value(value))
 
         context["extra"] = {
             "x_is_date": True,

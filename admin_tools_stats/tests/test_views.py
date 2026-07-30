@@ -9,6 +9,7 @@
 # Arezqui Belaid <info@star2billing.com>
 #
 from datetime import datetime, timezone
+from decimal import Decimal
 
 from django.contrib.auth.models import Permission
 from django.test import RequestFactory
@@ -363,6 +364,66 @@ class ChartDataViewContextTests(BaseSuperuserAuthenticatedClient):
                 "graph_key": "kid_graph",
                 "view": chart_data_view,
             },
+        )
+
+
+class DecimalSeriesViewsTests(BaseSuperuserAuthenticatedClient):
+    """Aggregates over a DecimalField must survive the chart's JSON serialization."""
+
+    def setUp(self):
+        self.stats = baker.make(
+            "DashboardStats",
+            date_field_name="birthday",
+            model_name="TestKid",
+            model_app_name="demoproject",
+            graph_key="kid_money_graph",
+            type_operation_field_name="Sum",
+            operation_field_name="pocket_money",
+        )
+        self.request_factory = RequestFactory()
+        super().setUp()
+
+    @override_settings(USE_TZ=True, TIME_ZONE="UTC")
+    def test_get_context_decimal_values_are_floats(self):
+        """Decimal aggregates are converted to floats in the chart context"""
+        baker.make(
+            "TestKid",
+            birthday=datetime(2010, 10, 10, tzinfo=timezone.utc),
+            pocket_money=Decimal("12.34"),
+        )
+        url = reverse("chart-data", kwargs={"graph_key": "kid_money_graph"})
+        url += (
+            "?time_since=2010-10-08&time_until=2010-10-12&select_box_interval=days"
+            "&select_box_chart_type=discreteBarChart&debug=True"
+        )
+        chart_data_view = ChartDataView()
+        chart_data_view.request = self.request_factory.get(url)
+        chart_data_view.request.user = self.user
+        context = chart_data_view.get_context_data(graph_key="kid_money_graph")
+        self.assertEqual(context["values"]["y0"], [0, 0, 12.34, 0, 0])
+        self.assertEqual(
+            [type(y) for y in context["values"]["y0"]],
+            [int, int, float, int, int],
+        )
+
+    @override_settings(USE_TZ=True, TIME_ZONE="UTC")
+    def test_get_multi_series_decimal_sum(self):
+        """Test rendering a chart summing a DecimalField"""
+        baker.make(
+            "TestKid",
+            birthday=datetime(2010, 10, 10, tzinfo=timezone.utc),
+            pocket_money=Decimal("12.34"),
+        )
+        url = reverse("chart-data", kwargs={"graph_key": "kid_money_graph"})
+        url += (
+            "?time_since=2010-10-08&time_until=2010-10-12"
+            "&select_box_interval=days&select_box_chart_type=discreteBarChart"
+        )
+        response = self.client.get(url)
+        assertContainsAny(
+            self,
+            response,
+            ('{"x": 1286668800000, "y": 12.34}', '{"y": 12.34, "x": 1286668800000}'),
         )
 
 
