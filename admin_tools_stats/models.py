@@ -1078,6 +1078,10 @@ class CriteriaToStatsM2M(models.Model):
                     str, Tuple[Union[None, str, bool, List[str]], Optional[str]]
                 ] = OrderedDict()
                 fchoices: Dict[str, str] = dict(field.choices or [])
+                # the name the values are ordered by: the criteria path is
+                # relative to the chart's own model, the related model knows
+                # only the last segment of it
+                order_field_name = field_name
                 if self.choices_based_on_time_range:
                     choices_queryset = self.stats.get_queryset()
                     if queryset_filter:
@@ -1096,10 +1100,11 @@ class CriteriaToStatsM2M(models.Model):
                     ).distinct()
                 else:
                     # Obtain the related model and the target field dynamically from the field_name
-                    related_model, field_name = self.get_related_model_and_field(field_name)
+                    related_model, related_field_name = self.get_related_model_and_field(field_name)
+                    order_field_name = related_field_name
 
                     choices_queryset = related_model.objects.values_list(
-                        field_name,  # targeting the final field in the related model
+                        related_field_name,  # targeting the final field in the related model
                         flat=True,
                     ).distinct()
 
@@ -1121,7 +1126,7 @@ class CriteriaToStatsM2M(models.Model):
                     other_choices_queryset: List[str] = choices_list[count_limit:]
                     choices_queryset = choices_list[:count_limit]
                 else:
-                    choices_queryset = choices_queryset.order_by(field_name)
+                    choices_queryset = choices_queryset.order_by(order_field_name)
                 choices.update(
                     ((i, (i, fchoices[i] if i in fchoices else i)) for i in choices_queryset),
                 )
