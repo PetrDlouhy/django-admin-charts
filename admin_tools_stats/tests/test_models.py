@@ -34,6 +34,7 @@ from admin_tools_stats.models import (
     Interval,
     truncate_ceiling,
 )
+from demoproject.demoproject.models import TestKid
 
 
 try:
@@ -583,6 +584,62 @@ class ModelTests(TestCase):
                 self.assertDictEqual(serie, testing_data)
 
                 # Clear for next run
+                User.objects.all().delete()
+
+    @skipIf(
+        settings.DATABASES["default"]["ENGINE"] == "django.db.backends.mysql",
+        "no support of USE_TZ=False in mysql",
+    )
+    @override_settings(USE_TZ=False)
+    def test_get_multi_series_count_limit_related_field(self):
+        """
+        Test function to check DashboardStats.get_multi_time_series()
+        Choices are limited by count and the criteria points to a related model
+        """
+        for choices_time_range in (True, False):
+            with self.subTest(choices_time_range):
+                cache.clear()
+                criteria = baker.make(
+                    "DashboardStatsCriteria",
+                    criteria_name="name",
+                    dynamic_criteria_field_name="first_name",
+                )
+                m2m = baker.make(
+                    "CriteriaToStatsM2M",
+                    criteria=criteria,
+                    stats=self.kid_stats,
+                    prefix="author__",
+                    use_as="multiple_series",
+                    count_limit=1,
+                    choices_based_on_time_range=choices_time_range,
+                )
+                petr = baker.make("User", first_name="Petr", is_superuser=True)
+                adam = baker.make("User", first_name="Adam")
+                baker.make("TestKid", author=petr, birthday=date(2010, 10, 10))
+                baker.make("TestKid", author=petr, birthday=date(2010, 10, 10))
+                baker.make("TestKid", author=adam, birthday=date(2010, 10, 9))
+                time_since = datetime(2010, 10, 8)
+                time_until = datetime(2010, 10, 11)
+
+                serie = self.kid_stats.get_multi_time_series(
+                    {"select_box_multiple_series": m2m.id},
+                    time_since,
+                    time_until,
+                    Interval.days,
+                    None,
+                    None,
+                    petr,
+                )
+                testing_data = {
+                    date(2010, 10, 8): {"other": 0, "Petr": 0, None: 0},
+                    date(2010, 10, 9): {"other": 1, "Petr": 0, None: 0},
+                    date(2010, 10, 10): {"other": 0, "Petr": 2, None: 0},
+                    date(2010, 10, 11): {"other": 0, "Petr": 0, None: 0},
+                }
+                self.assertDictEqual(serie, testing_data)
+
+                # Clear for next run
+                TestKid.objects.all().delete()
                 User.objects.all().delete()
 
     @skipIf(
