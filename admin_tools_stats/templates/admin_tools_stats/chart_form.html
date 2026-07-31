@@ -17,20 +17,342 @@
                 50% 50%
                 no-repeat;
     }
+
+    .chart-filter-bar {
+        border: 1px solid #ddd;
+        padding: 12px 15px;
+        background: #f8f8f8;
+        border-radius: 4px;
+        display: flex;
+        align-items: center;
+        gap: 15px;
+        flex-wrap: wrap;
+        overflow-x: auto;
+        max-width: 100%;
+    }
+
+    .chart-filter-sections {
+        display: flex;
+        gap: 15px;
+        flex-wrap: wrap;
+        flex: 1;
+        align-items: center;
+        min-width: 0;
+        max-width: 100%;
+    }
+
+    .chart-filter-section {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        padding-right: 15px;
+        border-right: 1px solid #ddd;
+        flex-wrap: wrap;
+        min-width: 0;
+    }
+
+    .chart-filter-section:last-child {
+        border-right: none;
+        padding-right: 0;
+    }
+
+    .chart-filter-section-label {
+        display: none;
+    }
+
+    .chart-filter-control {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+    }
+
+    .chart-filter-control label {
+        font-size: 11px;
+        color: #999;
+        font-weight: 400;
+        white-space: nowrap;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .chart-filter-control select,
+    .chart-filter-control input[type="date"] {
+        padding: 5px 8px;
+        border: 1px solid #ccc;
+        border-radius: 3px;
+        font-size: 13px;
+        background: white;
+        cursor: pointer;
+        max-width: 200px;
+    }
+
+    .chart-filter-control select:hover,
+    .chart-filter-control input[type="date"]:hover {
+        border-color: #417690;
+    }
+
+    .chart-filter-control select:focus,
+    .chart-filter-control input[type="date"]:focus {
+        outline: none;
+        border-color: #417690;
+        box-shadow: 0 0 0 2px rgba(65, 118, 144, 0.1);
+    }
+
+    .chart-filter-removable {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        background: white;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        padding: 4px 4px 4px 8px;
+    }
+
+    .chart-filter-removable label {
+        font-size: 11px;
+        color: #999;
+        font-weight: 400;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .chart-filter-removable select {
+        padding: 4px 6px;
+        border: 1px solid #ccc;
+        border-radius: 3px;
+        font-size: 13px;
+        background: white;
+        cursor: pointer;
+        max-width: 180px;
+    }
+
+    .chart-filter-removable select:hover {
+        border-color: #417690;
+    }
+
+    .chart-filter-remove-btn {
+        background: none;
+        border: none;
+        color: #999;
+        font-size: 16px;
+        line-height: 1;
+        padding: 0 4px;
+        cursor: pointer;
+    }
+
+    .chart-filter-remove-btn:hover {
+        color: #dc3545;
+    }
+
+    .chart-time-range {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    .chart-time-range input[type="date"] {
+        width: 135px;
+    }
+
+    .chart-time-range-separator {
+        color: #999;
+        font-weight: bold;
+    }
+
+    .chart-filter-actions {
+        display: flex;
+        gap: 6px;
+        margin-left: auto;
+    }
+
+    .chart-filter-actions button,
+    .chart-filter-actions a {
+        padding: 6px 10px;
+        border: 1px solid #ccc;
+        background: white;
+        border-radius: 3px;
+        cursor: pointer;
+        text-decoration: none;
+        color: #333;
+        font-size: 13px;
+    }
+
+    .chart-filter-actions button:hover,
+    .chart-filter-actions a:hover {
+        background: #f0f0f0;
+    }
+
+    .chart-add-filter-btn {
+        background: transparent;
+        border: 2px dashed #417690;
+        color: #417690;
+        padding: 4px 10px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 12px;
+        font-weight: 500;
+        position: relative;
+    }
+
+    .chart-add-filter-btn:hover {
+        background: #f0f7fa;
+        border-style: solid;
+    }
+
+    .chart-add-filter-dropdown {
+        position: fixed;
+        margin-top: 4px;
+        background: white;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        padding: 8px;
+        z-index: 1000;
+        display: none;
+        min-width: 180px;
+    }
+
+    .chart-add-filter-dropdown.show {
+        display: block;
+    }
+
+    .chart-add-filter-option {
+        padding: 6px 10px;
+        cursor: pointer;
+        border-radius: 3px;
+        font-size: 13px;
+        transition: background 0.2s;
+    }
+
+    .chart-add-filter-option:hover {
+        background: #f0f7fa;
+    }
+
+    @media (max-width: 768px) {
+        .chart-filter-bar {
+            padding: 8px 10px;
+        }
+
+        .chart-filter-sections {
+            gap: 8px;
+        }
+
+        .chart-filter-section {
+            border-right: none;
+            padding-right: 0;
+            gap: 6px;
+        }
+
+        .chart-filter-section-label {
+            font-size: 10px;
+        }
+
+        .chart-filter-control label,
+        .chart-filter-removable label {
+            display: none;
+        }
+
+        .chart-filter-control select,
+        .chart-filter-control input[type="date"],
+        .chart-filter-removable select {
+            font-size: 12px;
+            padding: 4px 6px;
+        }
+
+        .chart-time-range input[type="date"] {
+            width: 110px;
+        }
+
+        .chart-filter-actions {
+            margin-left: 0;
+            width: 100%;
+            justify-content: flex-end;
+        }
+    }
 </style>
-<form class="stateform" action="." method="POST" enctype="multipart/form-data">
-   <input id="load_on_change" title="Load on change" checked type="checkbox"/>⇒&nbsp;
+<form class="stateform chart-filter-bar" action="." method="POST" enctype="multipart/form-data">
+   <input id="load_on_change" title="Load on change" checked type="checkbox" style="display:none;"/>
    {% csrf_token %}
-   {% for w in form %}
-      {% if not w.is_hidden %}
-      {{ w.label }}:
+
+   <div class="chart-filter-sections">
+      <!-- Chart Type -->
+      {% if form.select_box_chart_type %}
+      <div class="chart-filter-section">
+         <span class="chart-filter-section-label">Chart</span>
+         <div class="chart-filter-control">
+            {{ form.select_box_chart_type }}
+         </div>
+      </div>
       {% endif %}
-      {{ w }}
-   {% endfor %}
-   &nbsp;<button class="reload" id="reload" title="reload values from unfinished periods" type="button" style="font-size:14px">⟳</button>
-   {% if chart.cache_values %}
-   &nbsp;<button class="reload" id="reload_all" title="reload all visible values" type="button" style="font-size:14px">⟳ all</button>
-   {% endif %}
-   &nbsp;<a href='{% url 'chart-analytics' %}?show={{ chart.graph_key }}' target='_blank'>analytics</a>
-   &nbsp;<a href='#' class="download-csv" data-graph-key="{{ chart.graph_key }}" title="Download chart data as CSV">📥 CSV</a>
+
+      <!-- PERIOD Section (includes time scale) -->
+      <div class="chart-filter-section">
+         <span class="chart-filter-section-label">Period</span>
+         {% if form.select_box_interval %}
+         <div class="chart-filter-control">
+            {{ form.select_box_interval }}
+         </div>
+         {% endif %}
+         <div class="chart-time-range">
+            {{ form.time_since }}
+            <span class="chart-time-range-separator">→</span>
+            {{ form.time_until }}
+         </div>
+      </div>
+
+      <!-- DATA Section (optional - show only if non-default) -->
+      {% if form.select_box_operation or form.select_box_operation_field or form.select_box_multiple_series %}
+      <div class="chart-filter-section">
+         <span class="chart-filter-section-label">Data</span>
+         {% if form.select_box_operation %}
+         <div class="chart-filter-control">
+            <label>{{ form.select_box_operation.label }}</label>
+            {{ form.select_box_operation }}
+         </div>
+         {% endif %}
+         {% if form.select_box_operation_field %}
+         <div class="chart-filter-control">
+            <label>{{ form.select_box_operation_field.label }}</label>
+            {{ form.select_box_operation_field }}
+         </div>
+         {% endif %}
+         {% if form.select_box_multiple_series %}
+         <div class="chart-filter-control">
+            <label>{{ form.select_box_multiple_series.label }}</label>
+            {{ form.select_box_multiple_series }}
+         </div>
+         {% endif %}
+      </div>
+      {% endif %}
+
+      <!-- FILTERS Section (dynamic) -->
+      <div class="chart-filter-section" id="filters-section">
+         <span class="chart-filter-section-label">Filters</span>
+         {% for field in form %}
+            {% if "select_box_dynamic" in field.name and not field.is_hidden %}
+               <div class="chart-filter-removable" data-filter-name="{{ field.name }}" data-filter-label="{{ field.label }}">
+                  <label>{{ field.label }}</label>
+                  {{ field }}
+                  <button type="button" class="chart-filter-remove-btn" data-field="{{ field.name }}" title="Remove filter">×</button>
+               </div>
+            {% endif %}
+         {% endfor %}
+         <button type="button" class="chart-add-filter-btn" id="add-filter-btn">
+            + Add
+            <div class="chart-add-filter-dropdown" id="add-filter-dropdown"></div>
+         </button>
+      </div>
+   </div>
+
+   <div class="chart-filter-actions">
+      <button class="reload" id="reload" title="reload values from unfinished periods" type="button">⟳</button>
+      {% if chart.cache_values %}
+      <button class="reload" id="reload_all" title="reload all visible values" type="button">⟳ all</button>
+      {% endif %}
+      <a href='{% url 'chart-analytics' %}?show={{ chart.graph_key }}' target='_blank' title="Open in analytics">📊</a>
+      <a href='#' class="download-csv" data-graph-key="{{ chart.graph_key }}" title="Download chart data as CSV">📥</a>
+   </div>
+
+   <!-- Hidden field -->
+   {{ form.graph_key }}
 </form>
