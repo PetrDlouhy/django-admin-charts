@@ -3,6 +3,7 @@ Changelog
 
 unreleased
 ----------
+* drop the jQuery dependency: the chart javascript, the admin index and the analytics page now use plain DOM APIs, and neither template loads ``jquery.js`` any more
 * fix Codecov uploads: replace the sunset ``codecov`` PyPI uploader (tokenless, rate-limited by the 36-job matrix) with ``codecov/codecov-action@v5``
 * ``recalculate_charts`` no longer imports a project-specific model and no longer looks up a hardcoded e-mail address; it takes ``--user`` and otherwise runs as any superuser
 * **support only currently supported versions: Python 3.10 - 3.14, Django 5.2 and 6.0.** Python 3.8/3.9 and Django 4.2/5.0/5.1 have reached end of life upstream

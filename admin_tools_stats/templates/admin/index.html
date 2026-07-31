@@ -4,7 +4,6 @@
 
 {% block extrastyle %}
    {{ block.super }}
-   <script src="{% static "admin/js/vendor/jquery/jquery.js" %}"></script>
    {% include '../include_nvd3.html' %}
    <script src="{% url 'admin-charts' %}" type="text/javascript"></script>
    <style>

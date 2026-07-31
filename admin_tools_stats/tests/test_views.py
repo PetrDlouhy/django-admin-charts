@@ -8,8 +8,10 @@
 # The Initial Developer of the Original Code is
 # Arezqui Belaid <info@star2billing.com>
 #
+import re
 from datetime import datetime, timezone
 from decimal import Decimal
+from pathlib import Path
 
 from django.contrib.auth.models import Permission
 from django.test import RequestFactory
@@ -646,6 +648,92 @@ class AnalyticsUserTemplateTests(BaseUserAuthenticatedClient):
         response = self.client.get(reverse("chart-analytics"))
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, "admin_tools_stats/analytics_user.html")
+
+
+class AdminChartsJsTests(BaseSuperuserAuthenticatedClient):
+    """The chart javascript must stay dependency-free (no jQuery)."""
+
+    def test_no_jquery_in_the_chart_javascript(self):
+        response = self.client.get(reverse("admin-charts"))
+        self.assertEqual(response.status_code, 200)
+        source = response.content.decode()
+        for construct in ("jQuery", "$(", "$.ajax", ".serialize()"):
+            self.assertNotIn(construct, source)
+
+    def test_entry_points_are_defined(self):
+        """The templates call these by name, so they must stay global"""
+        source = self.client.get(reverse("admin-charts")).content.decode()
+        for function in (
+            "function loadAdminChart(",
+            "function loadAnalyticsChart(",
+            "function loadChart(",
+            "function cleanupChart(",
+            "function isVisible(",
+        ):
+            self.assertIn(function, source)
+
+    def test_analytics_page_does_not_load_jquery(self):
+        baker.make(
+            "DashboardStats",
+            graph_title="Kid chart",
+            date_field_name="birthday",
+            model_name="TestKid",
+            model_app_name="demoproject",
+            graph_key="kid_graph",
+        )
+        response = self.client.get(reverse("chart-analytics"))
+        self.assertEqual(response.status_code, 200)
+        page = response.content.decode()
+        self.assertNotIn("jquery", page.lower())
+        self.assertNotIn("$(", page)
+
+
+class AdminChartsFixtureTests(BaseSuperuserAuthenticatedClient):
+    """The javascript tests run against a checked-in copy of the chart markup.
+
+    They cannot render Django templates, so the fixture would silently go stale
+    the moment the chart form changes. This keeps the two honest.
+    """
+
+    fixture_path = (
+        Path(__file__).resolve().parent.parent.parent / "js_tests" / "fixtures" / "chart_form.html"
+    )
+
+    @staticmethod
+    def normalize(html):
+        """Drop what legitimately differs: the csrf token, the criteria id -
+        which comes from a database sequence - and trailing whitespace."""
+        html = re.sub(r'value="[A-Za-z0-9]{40,}"', 'value="TEST-CSRF-TOKEN"', html)
+        html = re.sub(r"select_box_dynamic_\d+", "select_box_dynamic_ID", html)
+        # the fixture goes through pre-commit, which strips trailing whitespace
+        return "\n".join(line.rstrip() for line in html.strip().splitlines())
+
+    def test_fixture_matches_the_rendered_chart_form(self):
+        stats = baker.make(
+            "DashboardStats",
+            graph_title="Chart",
+            date_field_name="date_joined",
+            model_name="User",
+            model_app_name="auth",
+            graph_key="g1",
+            cache_values=True,
+            allowed_type_operation_field_name=[],
+        )
+        criteria = baker.make(
+            "DashboardStatsCriteria",
+            criteria_name="active",
+            dynamic_criteria_field_name="is_active",
+        )
+        baker.make("CriteriaToStatsM2M", criteria=criteria, stats=stats, use_as="chart_filter")
+
+        response = self.client.get(
+            reverse("chart-analytics", kwargs={"graph_key": "g1"}) + "?analytics_chart=true"
+        )
+        self.assertEqual(
+            self.normalize(response.content.decode()),
+            self.normalize(self.fixture_path.read_text()),
+            "js_tests/fixtures/chart_form.html is out of date - regenerate it from this response",
+        )
 
 
 class CSVDownloadSuperuserTests(BaseSuperuserAuthenticatedClient):

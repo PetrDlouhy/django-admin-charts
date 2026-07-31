@@ -4,10 +4,9 @@
 <script src="{% set_d3_js_path %}" type="text/javascript"></script>
 <script src="{% set_nvd3_js_path %}" type="text/javascript"></script>
 <script>
-    window.onload = function() {
-        $(".admin_chanrts_dynamic").each(function() {
-            var chart_key = $(this).data("chart-key");
-            loadAdminChart(chart_key);
+    window.addEventListener('load', function() {
+        document.querySelectorAll(".admin_chanrts_dynamic").forEach(function(element) {
+            loadAdminChart(element.dataset.chartKey);
         });
-    };
+    });
 </script>
