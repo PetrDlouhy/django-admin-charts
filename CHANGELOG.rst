@@ -1,25 +1,46 @@
 Changelog
 =========
 
-unreleased
-----------
-* reach full statement and branch coverage; ``get_series_query_parameters()`` no longer has a path that leaves ``single_value`` unbound
-* add a javascript test setup (``npm test``, node's own test runner + jsdom) with behaviour tests for the chart javascript, run in CI
-* drop the jQuery dependency: the chart javascript, the admin index and the analytics page now use plain DOM APIs, and neither template loads ``jquery.js`` any more
-* fix Codecov uploads: replace the sunset ``codecov`` PyPI uploader (tokenless, rate-limited by the 36-job matrix) with ``codecov/codecov-action@v5``
-* ``recalculate_charts`` no longer imports a project-specific model and no longer looks up a hardcoded e-mail address; it takes ``--user`` and otherwise runs as any superuser
+1.7.0 (2026-07-31)
+------------------
+
+Backwards incompatible
+~~~~~~~~~~~~~~~~~~~~~~
+
 * **support only currently supported versions: Python 3.10 - 3.14, Django 5.2 and 6.0.** Python 3.8/3.9 and Django 4.2/5.0/5.1 have reached end of life upstream
-* declare ``python_requires``, ``Django>=5.2`` and correct trove classifiers; ``django-bower`` moves to the ``bower`` extra and is no longer installed by default
-* drop the dead ``admin_tools_stats.charts`` (empty) and ``admin_tools_stats.utils`` (a ``Choice`` helper using Python 2 metaclass syntax, unused since the Python 3 port) modules
-* drop the ``backports.zoneinfo`` fallback and the removed ``dependency_links``/``test_suite`` setup arguments
-* report coverage with ``source`` instead of ``include``, so modules that no test imports show up as 0% instead of being absent from the report; add the missing ``management``/``commands`` ``__init__.py`` that hid the management command from it
-* cover the previously untested paths: the app label renamer, the chart control form's criteria fields, the admin analytics link and per-chart criteria queryset, ``static_or_path``, the userspace analytics template, the reload-all button and pytz-style ``ADMIN_CHARTS_TIMEZONE``
-* fix ``TypeError`` when rendering the chart controls of a chart whose ``allowed_type_operation_field_name`` was never set (the field is nullable and has no default)
-* fix ``KeyError`` breaking the whole admin index when a dashboard holds a ``DashboardChart`` for a graph key that no longer exists or was hidden; it is reported as an admin message, which is what the module already intended
+
+  Note that on Django 6.0 the optional ``django-admin-tools`` dashboard integration needs a
+  ``django-admin-tools`` release that no longer imports ``django.utils.itercompat``, which Django
+  6.0 removed - 0.9.3 still does. Charts on the plain ``django-admin`` index are unaffected.
+* **jQuery is no longer loaded by the admin index and analytics templates.** The chart javascript uses plain DOM APIs now; a project whose own overrides relied on ``$`` being defined by these templates has to load it itself
+* ``django-bower`` moves to the ``bower`` extra and is no longer installed by default - the CDN default needs nothing, so install ``django-admin-charts[bower]`` if you use the bower path
+* the dead ``admin_tools_stats.charts`` (empty) and ``admin_tools_stats.utils`` (a ``Choice`` helper using Python 2 metaclass syntax, unused since the Python 3 port) modules are gone
+* the ``backports.zoneinfo`` fallback and the removed ``dependency_links``/``test_suite`` setup arguments are gone
+
+Features
+~~~~~~~~
+
 * add ``Median`` operation, computed by the ``PERCENTILE_CONT`` ordered-set aggregate (PostgreSQL/Oracle; raises ``NotSupportedError`` on MySQL and SQLite)
-* fix mypy failure with current django-stubs: ``check_chart_permission()`` accepts the ``AnonymousUser`` it is already called with
+* ``recalculate_charts`` no longer imports a project-specific model and no longer looks up a hardcoded e-mail address; it takes ``--user`` and otherwise runs as any superuser
+* declare ``python_requires``, ``Django>=5.2`` and correct trove classifiers
+
+Fixes
+~~~~~
+
 * fix 500 on charts aggregating a ``DecimalField``: ``Decimal`` y values are converted to ``float`` before the series reaches ``python-nvd3``'s ``json.dumps()``
 * fix ``FieldError`` when a count-limited multiple-series criteria points to a related model: the limited choices query is built on the chart's own model, so it needs the full criteria path, not the related model's field name
+* fix ``TypeError`` when rendering the chart controls of a chart whose ``allowed_type_operation_field_name`` was never set (the field is nullable and has no default)
+* fix ``KeyError`` breaking the whole admin index when a dashboard holds a ``DashboardChart`` for a graph key that no longer exists or was hidden; it is reported as an admin message, which is what the module already intended
+* ``get_series_query_parameters()`` no longer has a path that leaves ``single_value`` unbound
+* fix mypy failure with current django-stubs: ``check_chart_permission()`` accepts the ``AnonymousUser`` it is already called with
+
+Testing and tooling
+~~~~~~~~~~~~~~~~~~~
+
+* add a javascript test setup (``npm test``, node's own test runner + jsdom) with behaviour tests for the chart javascript, run in CI
+* report coverage with ``source`` instead of ``include``, so modules that no test imports show up as 0% instead of being absent from the report; add the missing ``management``/``commands`` ``__init__.py`` that hid the management command from it
+* cover the previously untested paths: the management command, the app label renamer, the chart control form's criteria fields, the admin analytics link and per-chart criteria queryset, ``static_or_path``, the userspace analytics template, the reload-all button and pytz-style ``ADMIN_CHARTS_TIMEZONE``; statement and branch coverage are now at 100%
+* fix Codecov uploads: replace the sunset ``codecov`` PyPI uploader (tokenless, rate-limited by the 36-job matrix) with ``codecov/codecov-action@v5``
 
 1.6.0 (2026-02-24)
 ------------------
