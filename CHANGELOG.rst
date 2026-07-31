@@ -3,6 +3,7 @@ Changelog
 
 unreleased
 ----------
+* reach full statement and branch coverage; ``get_series_query_parameters()`` no longer has a path that leaves ``single_value`` unbound
 * add a javascript test setup (``npm test``, node's own test runner + jsdom) with behaviour tests for the chart javascript, run in CI
 * drop the jQuery dependency: the chart javascript, the admin index and the analytics page now use plain DOM APIs, and neither template loads ``jquery.js`` any more
 * fix Codecov uploads: replace the sunset ``codecov`` PyPI uploader (tokenless, rate-limited by the 36-job matrix) with ``codecov/codecov-action@v5``

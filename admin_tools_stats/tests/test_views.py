@@ -818,9 +818,8 @@ class CSVDownloadSuperuserTests(BaseSuperuserAuthenticatedClient):
         header = lines[2].split(",")
         self.assertEqual(header[0], "Date")
 
-        if len(lines) > 3:
-            data_row = lines[3].split(",")
-            self.assertIn("2010-10-10", data_row[0])
+        data_row = lines[3].split(",")
+        self.assertIn("2010-10-10", data_row[0])
 
     @override_settings(USE_TZ=True, TIME_ZONE="UTC")
     def test_csv_download_multiple_series(self):
@@ -1053,31 +1052,11 @@ class CachedChartsBugReproductionTests(BaseSuperuserAuthenticatedClient):
         content = response_csv.content.decode("utf-8")
         lines = content.strip().split("\r\n")
 
+        months = {}
         for line in lines[3:]:
-            if not line:
-                continue
-            parts = line.split(",")
-            if len(parts) < 2:
-                continue
-            date_str = parts[0]
-            value_str = parts[1]
+            date_str, value_str = line.split(",")[:2]
+            months[value_str] = datetime.strptime(date_str, "%Y-%m-%d %H:%M:%S").month
 
-            if value_str == "0" or value_str == "0.0":
-                continue
-
-            date_obj = datetime.strptime(date_str, "%Y-%m-%d %H:%M:%S")
-
-            if "100" in value_str:
-                self.assertEqual(
-                    date_obj.month,
-                    11,
-                    f"Value 100 is November data (Oct 31 23:00 UTC = Nov 1 00:00 CET). "
-                    f"Month should be 11, got {date_obj.month}. Date: {date_str}",
-                )
-            elif "200" in value_str:
-                self.assertEqual(
-                    date_obj.month,
-                    12,
-                    f"Value 200 is December data (Nov 30 23:00 UTC = Dec 1 00:00 CET). "
-                    f"Month should be 12, got {date_obj.month}. Date: {date_str}",
-                )
+        # Oct 31 23:00 UTC is Nov 1 00:00 CET, and Nov 30 23:00 UTC is Dec 1
+        # 00:00 CET: the cached values must be labelled with the local month
+        self.assertEqual(months, {"100.0": 11, "200.0": 12})

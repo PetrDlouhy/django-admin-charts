@@ -578,13 +578,13 @@ class DashboardStats(models.Model):
                     dynamic_values = dynamic_criteria[dynamic_key]
                     dynamic_field_name = m2m.get_dynamic_criteria_field_name()
                     criteria_key = "id" if dynamic_field_name == "" else dynamic_field_name
-                    if isinstance(dynamic_values, (list, tuple)):
-                        single_value = False
-                    elif isinstance(dynamic_values, str):
+                    if isinstance(dynamic_values, str):
                         dynamic_values = [
                             dynamic_values,
                         ]
                         single_value = True
+                    else:
+                        single_value = False
 
                     for dynamic_value in dynamic_values:
                         try:
@@ -741,8 +741,7 @@ class DashboardStats(models.Model):
         )
         for tv in serie_map:
             time = tv[0]
-            if time not in series:
-                series[time] = {}
+            series[time] = {}
             i = 0
             for name in names:
                 i += 1

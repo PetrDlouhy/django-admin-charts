@@ -1747,6 +1747,91 @@ class PytzTimezoneTests(TestCase):
             self.assertEqual(key.tzinfo, zoneinfo.ZoneInfo("Europe/Prague"))
 
 
+class CachedValueTimezoneTests(TestCase):
+    """Cached dates are naive when USE_TZ is off and aware when it is on."""
+
+    def setUp(self):
+        self.stats = baker.make(
+            "DashboardStats",
+            date_field_name="date_joined",
+            model_name="User",
+            model_app_name="auth",
+            graph_key="user_graph",
+            cache_values=True,
+            type_operation_field_name="Count",
+            operation_field_name="id",
+        )
+        self.user = baker.make("User", is_superuser=True)
+
+    def cached_series(self, date, since, until):
+        baker.make(
+            "CachedValue",
+            stats=self.stats,
+            time_scale="days",
+            operation="Count",
+            operation_field_name="id",
+            dynamic_choices=[],
+            filtered_value="",
+            date=date,
+            value=3,
+        )
+        return self.stats.get_multi_time_series_cached(
+            {},
+            since,
+            until,
+            Interval.days,
+            "Count",
+            "id",
+            self.user,
+        )
+
+    @skipIf(
+        settings.DATABASES["default"]["ENGINE"] == "django.db.backends.mysql",
+        "no support of USE_TZ=False in mysql",
+    )
+    @override_settings(USE_TZ=False)
+    def test_naive_cached_dates_are_used_as_they_are(self):
+        serie = self.cached_series(
+            datetime(2010, 10, 10), datetime(2010, 10, 9), datetime(2010, 10, 11)
+        )
+        self.assertEqual(serie[datetime(2010, 10, 10)][""], 3)
+
+    @override_settings(USE_TZ=True, TIME_ZONE="Europe/Prague")
+    def test_aware_cached_dates_are_converted_to_the_chart_timezone(self):
+        serie = self.cached_series(
+            datetime(2010, 10, 9, 22, tzinfo=timezone.utc),
+            datetime(2010, 10, 9, tzinfo=timezone.utc),
+            datetime(2010, 10, 11, tzinfo=timezone.utc),
+        )
+        prague = zoneinfo.ZoneInfo("Europe/Prague")
+        self.assertEqual(list(serie)[0].tzinfo, prague)
+
+
+class OperationsListCleanTests(TestCase):
+    """clean() validates each operation field, and tolerates blank entries."""
+
+    def make_stats(self, operation_field_name):
+        return baker.make(
+            "DashboardStats",
+            date_field_name="date_joined",
+            model_name="User",
+            model_app_name="auth",
+            operation_field_name=operation_field_name,
+        )
+
+    def test_blank_entries_are_skipped(self):
+        """A trailing comma leaves an empty operation, which is not a field"""
+        stats = self.make_stats("is_active,")
+        self.assertEqual(stats.get_operations_list(), ["is_active", ""])
+        stats.clean()
+
+    def test_unknown_operation_field_is_reported(self):
+        stats = self.make_stats("is_active,nonexistent")
+        with self.assertRaises(ValidationError) as error:
+            stats.clean()
+        self.assertIn("operation_field_name", error.exception.message_dict)
+
+
 class ControlFormTests(TestCase):
     def test_get_control_form_renders_the_fields(self):
         """get_control_form() renders the chart controls as HTML"""
