@@ -1,0 +1,13 @@
+{
+  "name": "django-admin-charts",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Javascript tests for the admin_charts.js template",
+  "type": "module",
+  "scripts": {
+    "test": "node --test js_tests/"
+  },
+  "devDependencies": {
+    "jsdom": "^24.1.3"
+  }
+}

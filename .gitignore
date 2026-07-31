@@ -49,3 +49,6 @@ dist/
 *.swo
 *.swn
 *.orig
+
+# javascript tests
+node_modules

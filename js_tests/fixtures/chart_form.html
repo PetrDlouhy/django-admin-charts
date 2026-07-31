@@ -1,0 +1,113 @@
+<div id="chart_g1" class="chrt_container">
+<div class="chrt_flex">
+    <h3>Chart</h3>
+
+
+    <style>
+    .loading {
+        pointer-events:none;
+    }
+
+    form.loading * {
+       opacity: 50%;
+    }
+
+    form.loading::after {
+         content: " ";
+         height: 31px;
+         width: 31px;
+         display: inline-block;
+         background: rgba( 255, 255, 255, .8 )
+                url('http://i.stack.imgur.com/FhHRx.gif')
+                50% 50%
+                no-repeat;
+    }
+</style>
+<form class="stateform" action="." method="POST" enctype="multipart/form-data">
+   <input id="load_on_change" title="Load on change" checked type="checkbox"/>⇒&nbsp;
+   <input type="hidden" name="csrfmiddlewaretoken" value="TEST-CSRF-TOKEN">
+
+
+      active:
+
+      <select name="select_box_dynamic_1" class="chart-input" required>
+  <option value="" selected>-------</option>
+
+  <option value="">All</option>
+
+  <option value="True">True</option>
+
+  <option value="False">False</option>
+
+</select>
+
+
+      <input type="hidden" name="graph_key" value="g1" class="hidden_graph_key">
+
+
+      Scale:
+
+      <select name="select_box_interval" class="chart-input">
+  <option value="hours">Hours</option>
+
+  <option value="days" selected>Days</option>
+
+  <option value="weeks">Weeks</option>
+
+  <option value="months">Months</option>
+
+  <option value="quarters">Quarters</option>
+
+  <option value="years">Years</option>
+
+</select>
+
+
+      Chart:
+
+      <select name="select_box_chart_type" class="chart-input select_box_chart_type">
+  <option value="discreteBarChart" selected>Bar</option>
+
+  <option value="lineChart">Line</option>
+
+  <option value="multiBarChart">Multi Bar</option>
+
+  <option value="pieChart">Pie</option>
+
+  <option value="stackedAreaChart">Stacked Area</option>
+
+  <option value="multiBarHorizontalChart">Multi Bar Horizontal</option>
+
+  <option value="linePlusBarChart">Line Plus Bar</option>
+
+  <option value="scatterChart">Scatter</option>
+
+  <option value="cumulativeLineChart">Cumulative Line</option>
+
+  <option value="lineWithFocusChart">Line With Focus</option>
+
+</select>
+
+
+      Since:
+
+      <input type="date" name="time_since" value="2026-06-30" class="chart-input select_box_date_since" required>
+
+
+      Until:
+
+      <input type="date" name="time_until" value="2026-07-31" class="chart-input select_box_date_until" required>
+
+   &nbsp;<button class="reload" id="reload" title="reload values from unfinished periods" type="button" style="font-size:14px">⟳</button>
+
+   &nbsp;<button class="reload" id="reload_all" title="reload all visible values" type="button" style="font-size:14px">⟳ all</button>
+
+   &nbsp;<a href='/admin_tools_stats/analytics/?show=g1' target='_blank'>analytics</a>
+   &nbsp;<a href='#' class="download-csv" data-graph-key="g1" title="Download chart data as CSV">📥 CSV</a>
+</form>
+
+
+    <div id="chart_container_g1" class="chrt_svg_container"><svg></svg></div>
+    <br/>
+</div>
+</div>

@@ -106,6 +106,20 @@ jobs:
           flags: ${{ matrix.DB_ENGINE }}
           # a Codecov outage must not fail the test matrix
           fail_ci_if_error: false
+  javascript:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      - name: Install dependencies
+        run: npm ci
+      - name: Run javascript tests
+        run: npm test
+
   lint:
     runs-on: ubuntu-latest
     steps:
