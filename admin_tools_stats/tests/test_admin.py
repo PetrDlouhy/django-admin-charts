@@ -326,3 +326,22 @@ class DashboardStatsAdminTests(BaseSuperuserAuthenticatedClient):
         )
         self.assertIn(own, queryset)
         self.assertNotIn(foreign, queryset)
+
+
+class AdminIndexJqueryTests(BaseSuperuserAuthenticatedClient):
+    """The admin index must not pull jQuery in for the charts any more."""
+
+    def test_index_does_not_load_jquery_for_the_charts(self):
+        baker.make(
+            "DashboardStats",
+            graph_title="User chart",
+            date_field_name="date_joined",
+            model_name="User",
+            model_app_name="auth",
+            graph_key="user_graph",
+        )
+        response = self.client.get(reverse("admin:index"))
+        self.assertEqual(response.status_code, 200)
+        page = response.content.decode()
+        self.assertNotIn("vendor/jquery/jquery.js", page)
+        self.assertNotIn("$(", page)

@@ -4,49 +4,66 @@
 
 {% block extrastyle %}
    {{ block.super }}
-   <script src="{% static "admin/js/vendor/jquery/jquery.js" %}"></script>
    {% include '../include_nvd3.html' %}
    <script src="{% url 'admin-charts' %}" type="text/javascript"></script>
    <script>
-      $( document ).ready(function() {
+      document.addEventListener('DOMContentLoaded', function() {
          {% if request.GET.show %}
             loadAnalyticsChart('{{ request.GET.show }}');
          {% endif %}
 
+         const sidebar = document.getElementById('chartSidebar');
+         const overlay = document.getElementById('menuOverlay');
+         const menuToggle = document.getElementById('menuToggle');
+
          function closeMenu() {
-            $('#chartSidebar').removeClass('open');
-            $('#menuOverlay').removeClass('open');
+            sidebar.classList.remove('open');
+            overlay.classList.remove('open');
          }
 
-         $('#menuToggle').click(function() {
-            $('#chartSidebar').toggleClass('open');
-            $('#menuOverlay').toggleClass('open');
-         });
+         if (menuToggle) {
+            menuToggle.addEventListener('click', function() {
+               sidebar.classList.toggle('open');
+               overlay.classList.toggle('open');
+            });
+         }
 
-         $('#menuOverlay').click(closeMenu);
+         if (overlay) {
+            overlay.addEventListener('click', closeMenu);
+         }
 
-         $(".change_chart_button").click(function(){
-            const chartKey = $(this).data("chart-key");
-            const urlParams = new URLSearchParams(window.location.search);
-            urlParams.set('show', chartKey);
-            window.history.pushState({}, '', window.location.pathname + '?' + urlParams.toString());
-            loadAnalyticsChart(chartKey);
-            closeMenu();
-            return false;
+         document.querySelectorAll(".change_chart_button").forEach(function(button) {
+            button.addEventListener('click', function(event) {
+               event.preventDefault();
+               const chartKey = button.dataset.chartKey;
+               const urlParams = new URLSearchParams(window.location.search);
+               urlParams.set('show', chartKey);
+               window.history.pushState({}, '', window.location.pathname + '?' + urlParams.toString());
+               loadAnalyticsChart(chartKey);
+               closeMenu();
+            });
          });
 
          let resizeTimer;
-         $(window).on('resize', function() {
+         window.addEventListener('resize', function() {
             clearTimeout(resizeTimer);
             resizeTimer = setTimeout(function() {
-               $('.admin_charts:visible form.stateform').each(function() {
-                  const $form = $(this);
-                  const graphKey = $form.find(".hidden_graph_key").first().val();
-                  if (graphKey) {
-                     cleanupChart(graphKey);
-                     $("#chart_container_" + graphKey).empty().append(html_string_analytics);
-                     loadChart($form, graphKey, false, true);
+               document.querySelectorAll('.admin_charts').forEach(function(chartElement) {
+                  if (!isVisible(chartElement)) {
+                     return;
                   }
+                  chartElement.querySelectorAll('form.stateform').forEach(function(form) {
+                     const graphKeyInput = form.querySelector(".hidden_graph_key");
+                     const graphKey = graphKeyInput ? graphKeyInput.value : null;
+                     if (graphKey) {
+                        cleanupChart(graphKey);
+                        const container = document.getElementById("chart_container_" + graphKey);
+                        if (container) {
+                           container.innerHTML = html_string_analytics;
+                        }
+                        loadChart(form, graphKey, false, true);
+                     }
+                  });
                });
             }, 300);
          });
