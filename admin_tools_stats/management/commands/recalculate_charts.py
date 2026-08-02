@@ -1,4 +1,5 @@
 import time
+import traceback
 from datetime import datetime, timedelta
 
 from datetime_truncate import truncate
@@ -107,72 +108,89 @@ class Command(BaseCommand):
         )
         self.stdout.write(f"recalculating charts: \n{chart_string}")
         user = self.get_user(options)
+        failed_graph_keys = []
         for stats in stats_query:
-            operation = stats.type_operation_field_name
-            configuration = {
-                "select_box_chart_type": stats.default_chart_type,
-                "reload": "True",
-                "reload_all": str(options["reload_all"]),
-            }
-            for criteria in stats.criteriatostatsm2m_set.filter(
-                use_as="chart_filter",
-                criteria__dynamic_criteria_field_name__isnull=False,
-            ):
-                configuration[f"select_box_dynamic_{criteria.id}"] = criteria.default_option
+            # Charts are configuration data, editable in the admin at any
+            # time. One misconfigured chart must fail loudly but must not
+            # starve every chart after it of its recalculation.
+            try:
+                self.recalculate_stats(stats, options, user)
+            except Exception:
+                self.stdout.write(traceback.format_exc())
+                self.stdout.write(f"recalculation of '{stats.graph_key}' FAILED, continuing")
+                failed_graph_keys.append(stats.graph_key)
+        if failed_graph_keys:
+            raise CommandError(
+                f"{len(failed_graph_keys)} chart(s) failed to recalculate: "
+                + ", ".join(failed_graph_keys)
+            )
 
-            all_multiseries_criteria = self.get_all_multiseries_criteria(stats, options)
+    def recalculate_stats(self, stats, options, user):
+        operation = stats.type_operation_field_name
+        configuration = {
+            "select_box_chart_type": stats.default_chart_type,
+            "reload": "True",
+            "reload_all": str(options["reload_all"]),
+        }
+        for criteria in stats.criteriatostatsm2m_set.filter(
+            use_as="chart_filter",
+            criteria__dynamic_criteria_field_name__isnull=False,
+        ):
+            configuration[f"select_box_dynamic_{criteria.id}"] = criteria.default_option
 
-            self.stdout.write(f"recalculating {stats} controls")
-            if not options["dry_run"]:
-                stats.get_control_form_raw(user=user)
+        all_multiseries_criteria = self.get_all_multiseries_criteria(stats, options)
 
-            for multiseries_criteria in all_multiseries_criteria:
-                if multiseries_criteria:
-                    configuration["select_box_multiple_series"] = multiseries_criteria.id
+        self.stdout.write(f"recalculating {stats} controls")
+        if not options["dry_run"]:
+            stats.get_control_form_raw(user=user)
 
-                if options.get("time_ranges", None):
-                    time_scales = options["time_ranges"].split(",")
-                else:
-                    time_scales = stats.allowed_time_scales
+        for multiseries_criteria in all_multiseries_criteria:
+            if multiseries_criteria:
+                configuration["select_box_multiple_series"] = multiseries_criteria.id
 
-                chart_tz = get_charts_timezone()
-                operation_fields = stats.operation_field_name.split(",") + [""]
+            if options.get("time_ranges", None):
+                time_scales = options["time_ranges"].split(",")
+            else:
+                time_scales = stats.allowed_time_scales
 
-                for operation_field in operation_fields:
-                    for selected_interval in time_scales:
-                        start_time = time.time()
+            chart_tz = get_charts_timezone()
+            operation_fields = stats.operation_field_name.split(",") + [""]
 
-                        self.stdout.write(
-                            f"recalculating chart '{stats}' with '{multiseries_criteria}' on "
-                            f"'{operation_field}' criteria in {selected_interval}"
+            for operation_field in operation_fields:
+                for selected_interval in time_scales:
+                    start_time = time.time()
+
+                    self.stdout.write(
+                        f"recalculating chart '{stats}' with '{multiseries_criteria}' on "
+                        f"'{operation_field}' criteria in {selected_interval}"
+                    )
+                    time_since = datetime.now() - timedelta(
+                        days=stats.default_time_period
+                    ) * options.get("periods_count", 1)
+                    time_since = truncate(time_since, Interval(selected_interval).val())
+                    time_since = time_since.astimezone(chart_tz)
+
+                    if options.get("time_until", None):
+                        time_until = datetime.strptime(options["time_until"], "%Y-%m-%d").replace(
+                            hour=23, minute=59, second=59
                         )
-                        time_since = datetime.now() - timedelta(
-                            days=stats.default_time_period
-                        ) * options.get("periods_count", 1)
-                        time_since = truncate(time_since, Interval(selected_interval).val())
-                        time_since = time_since.astimezone(chart_tz)
+                    else:
+                        time_until = datetime.now()
+                    time_until = truncate_ceiling(time_until, Interval(selected_interval).val())
+                    time_until = time_until.astimezone(chart_tz)
 
-                        if options.get("time_until", None):
-                            time_until = datetime.strptime(
-                                options["time_until"], "%Y-%m-%d"
-                            ).replace(hour=23, minute=59, second=59)
-                        else:
-                            time_until = datetime.now()
-                        time_until = truncate_ceiling(time_until, Interval(selected_interval).val())
-                        time_until = time_until.astimezone(chart_tz)
+                    configuration["select_box_interval"] = selected_interval
+                    if not options["dry_run"]:
+                        stats.get_multi_time_series_cached(
+                            configuration=configuration,
+                            time_since=time_since,
+                            time_until=time_until,
+                            interval=Interval(selected_interval),
+                            operation_choice=operation,
+                            operation_field_choice=operation_field,
+                            user=user,
+                        )
 
-                        configuration["select_box_interval"] = selected_interval
-                        if not options["dry_run"]:
-                            stats.get_multi_time_series_cached(
-                                configuration=configuration,
-                                time_since=time_since,
-                                time_until=time_until,
-                                interval=Interval(selected_interval),
-                                operation_choice=operation,
-                                operation_field_choice=operation_field,
-                                user=user,
-                            )
-
-                        end_time = time.time()
-                        duration = end_time - start_time
-                        self.stdout.write(f"  -> Recalculation took {duration:.2f} seconds")
+                    end_time = time.time()
+                    duration = end_time - start_time
+                    self.stdout.write(f"  -> Recalculation took {duration:.2f} seconds")

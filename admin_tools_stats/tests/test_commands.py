@@ -143,3 +143,76 @@ class RecalculateChartsTests(TestCase):
         output = self.call("--time-ranges", "days", "--exclude", "user_graph")
         self.assertNotIn("user_graph", output)
         self.assertFalse(CachedValue.objects.exists())
+
+
+class RecalculateChartsBrokenChartTests(TestCase):
+    """One misconfigured chart must not starve every other chart.
+
+    Charts are configuration data anyone can edit in the admin. In production
+    a single criteria with an unresolvable field name killed the whole weekly
+    recalculation for ten weeks straight: every chart ordered after the broken
+    one silently kept its stale cache, and the admin dashboards fell back to
+    computing on demand (30+ second page loads).
+    """
+
+    def setUp(self):
+        self.broken = baker.make(
+            "DashboardStats",
+            date_field_name="date_joined",
+            graph_title="Broken chart",
+            model_name="User",
+            model_app_name="auth",
+            graph_key="broken_graph",
+            type_operation_field_name="Count",
+            operation_field_name="id",
+            cache_values=True,
+            show_to_users=False,
+        )
+        criteria = baker.make(
+            "DashboardStatsCriteria",
+            criteria_name="No such field",
+            dynamic_criteria_field_name="no_such_field",
+        )
+        baker.make(
+            "CriteriaToStatsM2M",
+            criteria=criteria,
+            stats=self.broken,
+            use_as="multiple_series",
+            recalculate=True,
+        )
+        self.healthy = baker.make(
+            "DashboardStats",
+            date_field_name="date_joined",
+            graph_title="Healthy chart",
+            model_name="User",
+            model_app_name="auth",
+            graph_key="healthy_graph",
+            type_operation_field_name="Count",
+            operation_field_name="id",
+            cache_values=True,
+            show_to_users=False,
+        )
+        baker.make(
+            "User",
+            username="admin",
+            is_superuser=True,
+            date_joined=datetime(2020, 1, 1, tzinfo=timezone.utc),
+        )
+
+    def test_broken_chart_does_not_stop_the_others(self):
+        """The healthy chart is still recalculated and the failure is reported."""
+        out = StringIO()
+        with self.assertRaises(CommandError) as error:
+            call_command("recalculate_charts", "--time-ranges", "days", stdout=out)
+
+        self.assertTrue(CachedValue.objects.filter(stats=self.healthy).exists())
+        self.assertIn("broken_graph", str(error.exception))
+        self.assertIn("1 chart(s) failed to recalculate", str(error.exception))
+        self.assertIn("no_such_field", out.getvalue())
+
+    def test_all_healthy_charts_still_exit_cleanly(self):
+        """Without a broken chart the command keeps its zero exit code."""
+        self.broken.delete()
+        out = StringIO()
+        call_command("recalculate_charts", "--time-ranges", "days", stdout=out)
+        self.assertTrue(CachedValue.objects.filter(stats=self.healthy).exists())
