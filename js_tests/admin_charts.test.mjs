@@ -38,10 +38,13 @@ describe("form serialization", () => {
         assert.ok(params.has("select_box_interval"));
     });
 
-    it("skips the load-on-change checkbox, which carries no name", async () => {
+    it("skips the folded-away filters only by their empty value, not their fields", async () => {
         const win = chartPage();
         await settle();
-        assert.ok(!lastRequest(win).url.includes("load_on_change"));
+        // the empty filter is folded away visually but still submits its
+        // (empty) field, so the chart data view sees a stable parameter set
+        const params = new URLSearchParams(lastRequest(win).url.split("?")[1]);
+        assert.equal(params.get("select_box_dynamic_1"), "");
     });
 });
 
@@ -88,8 +91,8 @@ describe("reload buttons", () => {
     });
 });
 
-describe("load on change", () => {
-    it("reloads the chart when a control changes and the checkbox is ticked", async () => {
+describe("direct editing", () => {
+    it("reloads the chart as soon as a control changes", async () => {
         const win = chartPage();
         await settle();
         win.requests.length = 0;
@@ -102,19 +105,102 @@ describe("load on change", () => {
         assert.equal(win.requests.length, 1);
         assert.ok(lastRequest(win).url.includes("time_since=2021-01-01"), lastRequest(win).url);
     });
+});
 
-    it("does nothing when the checkbox is unticked", async () => {
+describe("filter chips", () => {
+    function chip(win) {
+        return win.document.querySelector(".chart-filter-removable");
+    }
+    function addButton(win) {
+        return win.document.querySelector(".chart-add-filter-btn");
+    }
+    function dropdown(win) {
+        return win.document.querySelector(".chart-add-filter-dropdown");
+    }
+
+    it("folds an empty filter away behind the add button on load", async () => {
         const win = chartPage();
         await settle();
-        win.document.getElementById("load_on_change").checked = false;
+
+        assert.equal(chip(win).style.display, "none");
+        const options = dropdown(win).querySelectorAll(".chart-add-filter-option");
+        assert.equal(options.length, 1);
+        assert.equal(options[0].textContent, "active");
+    });
+
+    it("adds a filter back with its first real choice and reloads the chart", async () => {
+        const win = chartPage();
+        await settle();
         win.requests.length = 0;
 
-        const input = win.document.querySelector('[name="time_since"]');
-        input.value = "2022-02-02";
-        input.dispatchEvent(new win.Event("change", { bubbles: true }));
+        addButton(win).click();
+        assert.ok(dropdown(win).classList.contains("show"));
+        assert.equal(addButton(win).getAttribute("aria-expanded"), "true");
+
+        dropdown(win).querySelector(".chart-add-filter-option").click();
+        await settle();
+
+        assert.equal(chip(win).style.display, "");
+        assert.equal(chip(win).querySelector("select").value, "True");
+        assert.ok(!dropdown(win).classList.contains("show"));
+        assert.ok(
+            lastRequest(win).url.includes("select_box_dynamic_1=True"),
+            lastRequest(win).url
+        );
+        // nothing left to add: the button folds away too
+        assert.equal(addButton(win).closest(".chart-add-filter").style.display, "none");
+    });
+
+    it("removes a filter: clears its value, hides the chip and reloads", async () => {
+        const win = chartPage();
+        await settle();
+        const select = chip(win).querySelector("select");
+        chip(win).style.display = "";
+        select.value = "True";
+        win.requests.length = 0;
+
+        chip(win).querySelector(".chart-filter-remove-btn").click();
+        await settle();
+
+        assert.equal(select.value, "");
+        assert.equal(chip(win).style.display, "none");
+        assert.equal(win.requests.length, 1);
+        assert.ok(
+            lastRequest(win).url.includes("select_box_dynamic_1=&"),
+            lastRequest(win).url
+        );
+        assert.equal(dropdown(win).querySelectorAll(".chart-add-filter-option").length, 1);
+    });
+
+    it("does not reload when removing a filter that was already empty", async () => {
+        const win = chartPage();
+        await settle();
+        chip(win).style.display = "";
+        win.requests.length = 0;
+
+        chip(win).querySelector(".chart-filter-remove-btn").click();
         await settle();
 
         assert.equal(win.requests.length, 0);
+        assert.equal(chip(win).style.display, "none");
+    });
+
+    it("closes the dropdown on an outside click and on Escape", async () => {
+        const win = chartPage();
+        await settle();
+
+        addButton(win).click();
+        assert.ok(dropdown(win).classList.contains("show"));
+        win.document.body.click();
+        assert.ok(!dropdown(win).classList.contains("show"));
+        assert.equal(addButton(win).getAttribute("aria-expanded"), "false");
+
+        addButton(win).click();
+        assert.ok(dropdown(win).classList.contains("show"));
+        win.document.dispatchEvent(
+            new win.KeyboardEvent("keydown", { key: "Escape", bubbles: true })
+        );
+        assert.ok(!dropdown(win).classList.contains("show"));
     });
 });
 

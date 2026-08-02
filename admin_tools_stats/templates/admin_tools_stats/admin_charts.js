@@ -215,10 +215,106 @@ function loadAnchor(element){
    loadChart(form, graph_key, reload, is_analytics);
 }
 
+function filterChips(form) {
+   return Array.prototype.slice.call(form.querySelectorAll('.chart-filter-removable'));
+}
+
+function updateAddFilterDropdown(form) {
+   const wrapper = form.querySelector('.chart-add-filter');
+   if (!wrapper) {
+      return;
+   }
+   const dropdown = wrapper.querySelector('.chart-add-filter-dropdown');
+   dropdown.innerHTML = '';
+   filterChips(form).forEach(function(chip) {
+      if (chip.style.display !== 'none') {
+         return;
+      }
+      const option = document.createElement('button');
+      option.type = 'button';
+      option.className = 'chart-add-filter-option';
+      option.textContent = chip.dataset.filterLabel;
+      option.dataset.filterName = chip.dataset.filterName;
+      dropdown.appendChild(option);
+   });
+   wrapper.style.display = dropdown.children.length ? '' : 'none';
+}
+
+function closeAddFilterDropdowns(except) {
+   document.querySelectorAll('.chart-add-filter-dropdown.show').forEach(function(dropdown) {
+      if (dropdown !== except) {
+         dropdown.classList.remove('show');
+         const button = dropdown.parentElement.querySelector('.chart-add-filter-btn');
+         if (button) {
+            button.setAttribute('aria-expanded', 'false');
+         }
+      }
+   });
+}
+
+function toggleAddFilterDropdown(button) {
+   const dropdown = button.parentElement.querySelector('.chart-add-filter-dropdown');
+   closeAddFilterDropdowns(dropdown);
+   const show = !dropdown.classList.contains('show');
+   dropdown.classList.toggle('show', show);
+   button.setAttribute('aria-expanded', show ? 'true' : 'false');
+}
+
+function addFilter(option) {
+   const form = option.closest('form.stateform');
+   const chip = form.querySelector(
+      '.chart-filter-removable[data-filter-name="' + option.dataset.filterName + '"]'
+   );
+   if (!chip) {
+      return;
+   }
+   chip.style.display = '';
+   const select = chip.querySelector('select');
+   if (select) {
+      const firstChoice = Array.prototype.find.call(select.options, function(o) {
+         return o.value !== '';
+      });
+      if (firstChoice) {
+         select.value = firstChoice.value;
+      }
+   }
+   closeAddFilterDropdowns();
+   updateAddFilterDropdown(form);
+   loadAnchor(form);
+}
+
+function removeFilter(button) {
+   const chip = button.closest('.chart-filter-removable');
+   const form = button.closest('form.stateform');
+   const select = chip.querySelector('select');
+   const hadValue = select && select.value !== '';
+   if (select) {
+      select.value = '';
+   }
+   chip.style.display = 'none';
+   updateAddFilterDropdown(form);
+   if (hadValue) {
+      loadAnchor(form);
+   }
+}
+
+// a filter whose select carries no value does not constrain the chart, so it
+// starts folded away behind the "+ Add filter" button
+function hideEmptyFilters(form) {
+   filterChips(form).forEach(function(chip) {
+      const select = chip.querySelector('select');
+      if (select && select.value === '') {
+         chip.style.display = 'none';
+      }
+   });
+   updateAddFilterDropdown(form);
+}
+
 function loadChartForms(chartElement, chart_key){
    visibleForms(chartElement).forEach(function(form) {
       populateFormFromUrl(form, chart_key);
       updateAnalyticsLink(form, chart_key);
+      hideEmptyFilters(form);
       loadAnchor(form);
    });
 }
@@ -289,12 +385,15 @@ defer( function(){
    onReady(function() {
 
       document.body.addEventListener('change', function(event) {
-         if (event.target.matches('#load_on_change:checked ~ .chart-input')) {
+         if (event.target.matches('.chart-input')) {
             loadAnchor(event.target);
          }
       });
 
       document.body.addEventListener('click', function(event) {
+         if (!event.target.closest('.chart-add-filter')) {
+            closeAddFilterDropdowns();
+         }
          const reloadButton = event.target.closest('.reload');
          if (reloadButton) {
             loadAnchor(reloadButton);
@@ -303,10 +402,32 @@ defer( function(){
          const csvLink = event.target.closest('.download-csv');
          if (csvLink) {
             downloadCSV(event, csvLink);
+            return;
+         }
+         const removeButton = event.target.closest('.chart-filter-remove-btn');
+         if (removeButton) {
+            removeFilter(removeButton);
+            return;
+         }
+         const addOption = event.target.closest('.chart-add-filter-option');
+         if (addOption) {
+            addFilter(addOption);
+            return;
+         }
+         const addButton = event.target.closest('.chart-add-filter-btn');
+         if (addButton) {
+            toggleAddFilterDropdown(addButton);
+         }
+      });
+
+      document.addEventListener('keydown', function(event) {
+         if (event.key === 'Escape') {
+            closeAddFilterDropdowns();
          }
       });
 
       visibleForms(document).forEach(function(form) {
+         hideEmptyFilters(form);
          loadAnchor(form);
       });
    });
