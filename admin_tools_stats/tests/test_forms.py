@@ -16,6 +16,7 @@ class ChartSettingsFormTests(TestCase):
             ch.fields["select_box_operation_field"].choices,
             [("", "(divide all)"), ("auth", "auth"), ("user", "user")],
         )
+        self.assertFalse(ch.has_chart_filters)
 
     def test_chart_filter_and_multiple_series_fields(self):
         """Criteria of the chart add a filter select and the "Divide" select"""
@@ -55,6 +56,7 @@ class ChartSettingsFormTests(TestCase):
             [("", "-------"), ("", "All"), (True, "True"), (False, "False")],
         )
         self.assertEqual(filter_field.widget.attrs["class"], "chart-input")
+        self.assertTrue(ch.has_chart_filters)
 
         divide_field = ch.fields["select_box_multiple_series"]
         self.assertEqual(divide_field.label, "Divide")
