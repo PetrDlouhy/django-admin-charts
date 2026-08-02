@@ -21,6 +21,8 @@ class ChartSettingsForm(forms.Form):
                     "class"
                 ] = "chart-input"
 
+        self.has_chart_filters = any(name.startswith("select_box_dynamic_") for name in self.fields)
+
         self.fields["graph_key"] = forms.CharField(
             initial=stats.graph_key,
             widget=forms.HiddenInput(attrs={"class": "hidden_graph_key"}),
