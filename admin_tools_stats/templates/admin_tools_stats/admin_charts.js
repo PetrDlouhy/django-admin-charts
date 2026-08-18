@@ -2,6 +2,7 @@
 var html_string = '<svg style="width:100%;height:400px"></svg>';
 var html_string_analytics = '<svg style="width:100%;height:100%"></svg>';
 var chart_scripts = {};
+var chart_fetch_controllers = new WeakMap();
 
 function isVisible(element) {
    return !!(element.offsetWidth || element.offsetHeight || element.getClientRects().length);
@@ -135,6 +136,14 @@ function updateAnalyticsLink(form, graph_key) {
 }
 
 function loadChart(form, graph_key, reload, is_analytics){
+   // direct editing fires a request per control change; without cancellation
+   // two quick changes race and the older response can render last, leaving
+   // a chart that does not match the visible settings
+   const previous = chart_fetch_controllers.get(form);
+   if (previous) {
+      previous.abort();
+   }
+
    const data_str = serializeForm(form);
 
    if(is_analytics) {
@@ -151,7 +160,10 @@ function loadChart(form, graph_key, reload, is_analytics){
    const url = "{% url 'chart-data' %}" + graph_key + "/";
    const reload_str = reload ? "&" + reload + "=true" : "";
 
-   fetch(url + "?" + data_str + reload_str, {credentials: "same-origin"})
+   const controller = new AbortController();
+   chart_fetch_controllers.set(form, controller);
+
+   fetch(url + "?" + data_str + reload_str, {credentials: "same-origin", signal: controller.signal})
       .then(function(response) {
          if (!response.ok) {
             throw new Error("HTTP " + response.status);
@@ -169,7 +181,10 @@ function loadChart(form, graph_key, reload, is_analytics){
             chart_scripts[data_str] = window.loadChartScript;
          }
       })
-      .catch(function() {
+      .catch(function(error) {
+         if (error && error.name === 'AbortError') {
+            return;  // superseded by a newer request, which owns the spinner now
+         }
          alert("Error during chart loading.");
          form.classList.remove("loading");
       });
