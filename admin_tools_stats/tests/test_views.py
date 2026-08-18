@@ -702,9 +702,12 @@ class AdminChartsFixtureTests(BaseSuperuserAuthenticatedClient):
     @staticmethod
     def normalize(html):
         """Drop what legitimately differs: the csrf token, the criteria id -
-        which comes from a database sequence - and trailing whitespace."""
+        which comes from a database sequence - the date defaults - which move
+        with the calendar day and made this test rot daily - and trailing
+        whitespace."""
         html = re.sub(r'value="[A-Za-z0-9]{40,}"', 'value="TEST-CSRF-TOKEN"', html)
         html = re.sub(r"select_box_dynamic_\d+", "select_box_dynamic_ID", html)
+        html = re.sub(r'value="\d{4}-\d{2}-\d{2}"', 'value="DATE"', html)
         # the fixture goes through pre-commit, which strips trailing whitespace
         return "\n".join(line.rstrip() for line in html.strip().splitlines())
 
