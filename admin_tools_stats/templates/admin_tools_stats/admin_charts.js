@@ -513,6 +513,27 @@ function lazyLoadAdminCharts() {
    });
 }
 
+// the dashboard arranges its columns while charts load, so a chart can
+// measure a mid-layout container and render at the wrong width; re-render
+// (from the script cache, without refetching) whenever the width settles
+function watchChartWidth(chartElement) {
+   if (!('ResizeObserver' in window)) {
+      return;
+   }
+   let lastWidth = chartElement.getBoundingClientRect().width;
+   const observer = new ResizeObserver(function(entries) {
+      const width = entries[entries.length - 1].contentRect.width;
+      if (Math.abs(width - lastWidth) < 1) {
+         return;
+      }
+      lastWidth = width;
+      visibleForms(chartElement).forEach(function(form) {
+         loadAnchor(form);
+      });
+   });
+   observer.observe(chartElement);
+}
+
 function loadAdminChart(chart_key){
    const chartElement = document.getElementById("chart_element_" + chart_key);
    if (!chartElement) {
@@ -526,6 +547,7 @@ function loadAdminChart(chart_key){
          chartElement.classList.add('loaded');
 
          loadChartForms(chartElement, chart_key);
+         watchChartWidth(chartElement);
       });
    }
    chartElement.style.display = '';

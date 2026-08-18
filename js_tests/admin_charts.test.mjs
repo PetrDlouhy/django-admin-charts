@@ -563,6 +563,35 @@ describe("lazy chart loading", () => {
         );
     });
 
+    it("re-renders a chart when its container width settles after layout", async () => {
+        const win = chartPage({ response: CHART_SCRIPT });
+        await settle();
+        // wrap the loaded form the way a dashboard chart element does
+        const wrapper = win.document.createElement("div");
+        const theForm = form(win);
+        theForm.parentElement.insertBefore(wrapper, theForm);
+        wrapper.appendChild(theForm);
+
+        let resize = null;
+        win.ResizeObserver = class {
+            constructor(callback) { resize = callback; }
+            observe() {}
+        };
+        win.watchChartWidth(wrapper);
+        win.requests.length = 0;
+        const runsBefore = win.chartRuns;
+
+        resize([{ contentRect: { width: 700 } }]);
+        await settle();
+
+        assert.equal(win.chartRuns, runsBefore + 1, "the cached chart must redraw");
+        assert.equal(win.requests.length, 0, "a redraw must not refetch the data");
+
+        resize([{ contentRect: { width: 700 } }]);
+        await settle();
+        assert.equal(win.chartRuns, runsBefore + 1, "an unchanged width must not redraw");
+    });
+
     it("falls back to loading everything when IntersectionObserver is missing", async () => {
         const win = chartPage();
         await settle();
