@@ -23,249 +23,296 @@
                 no-repeat;
     }
 
-    .chart-filter-bar {
-        border: 1px solid var(--border-color, #ddd);
-        padding: 12px 15px;
-        background: var(--darkened-bg, #f8f8f8);
+    /* ── flat toolbar: no frame, ghost controls, role icons ───────── */
+    .chart-toolbar {
+        padding: 3px 0;
+    }
+
+    .chart-toolbar-row {
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 2px;
+        min-height: 32px;
+    }
+
+    .chart-toolbar-filters {
+        min-height: 30px;
+        padding-top: 1px;
+    }
+
+    .chart-toolbar-sep {
+        width: 1px;
+        height: 18px;
+        background: var(--hairline-color, #e9e7e4);
+        margin: 0 8px;
+        flex: none;
+    }
+
+    /* ghost control = role icon + borderless input, one hover surface */
+    .chart-ctl {
+        display: inline-flex;
+        align-items: center;
+        height: 26px;
+        border: 1px solid transparent;
         border-radius: 4px;
-        display: flex;
-        align-items: center;
-        gap: 15px;
-        flex-wrap: wrap;
-        max-width: 100%;
+        padding-left: 7px;
+        transition: background-color 0.12s, border-color 0.12s;
     }
 
-    .chart-filter-sections {
-        display: flex;
-        gap: 15px;
-        flex-wrap: wrap;
-        flex: 1;
-        align-items: center;
-        min-width: 0;
+    .chart-ctl > svg {
+        width: 13px;
+        height: 13px;
+        flex: none;
+        color: var(--body-quiet-color, #8f8d8a);
+        fill: currentColor;
     }
 
-    .chart-filter-section {
-        display: flex;
-        gap: 8px;
-        align-items: center;
-        padding-right: 15px;
-        border-right: 1px solid var(--border-color, #ddd);
-        flex-wrap: wrap;
-        min-width: 0;
+    .chart-ctl:hover {
+        background-color: var(--darkened-bg, #f2f1ef);
+        border-color: var(--hairline-color, #e9e7e4);
     }
 
-    .chart-filter-section:last-child {
-        border-right: none;
-        padding-right: 0;
+    .chart-ctl:focus-within {
+        border-color: var(--secondary, #417690);
+        box-shadow: 0 0 0 2px rgba(65, 118, 144, 0.22);
+        background-color: var(--body-bg, #fff);
     }
 
-    .chart-filter-control {
-        display: flex;
-        align-items: center;
-        gap: 4px;
-    }
+    .chart-type-icon g { display: none; }
 
-    .chart-filter-control label,
-    .chart-filter-removable label {
-        font-size: 11px;
-        color: var(--body-quiet-color, #999);
-        font-weight: 400;
-        white-space: nowrap;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-    }
-
-    .chart-filter-bar select,
-    .chart-filter-bar input[type="date"] {
-        padding: 4px 6px;
-        border: 1px solid var(--border-color, #ccc);
-        border-radius: 3px;
-        font-size: 13px;
-        background: var(--body-bg, white);
+    .chart-toolbar select,
+    .chart-toolbar input[type="date"] {
+        appearance: none;
+        -webkit-appearance: none;
+        font: inherit;
+        font-size: 12.5px;
         color: var(--body-fg, #333);
+        background-color: transparent;
+        border: none;
+        border-radius: 4px;
+        height: 24px;
+        padding: 0 17px 0 6px;
+        max-width: 185px;
+        text-overflow: ellipsis;
         cursor: pointer;
-        max-width: 200px;
+        background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="8" height="5" viewBox="0 0 8 5"><path d="M0 0l4 5 4-5z" fill="%23908e8a"/></svg>');
+        background-repeat: no-repeat;
+        background-position: right 5px center;
     }
 
-    .chart-filter-bar select:hover,
-    .chart-filter-bar input[type="date"]:hover {
-        border-color: var(--body-quiet-color, #417690);
-    }
-
-    .chart-filter-bar select:focus,
-    .chart-filter-bar input[type="date"]:focus {
+    .chart-toolbar select:focus,
+    .chart-toolbar input[type="date"]:focus {
         outline: none;
-        border-color: var(--primary, #417690);
-        box-shadow: 0 0 0 2px rgba(65, 118, 144, 0.2);
+    }
+
+    .chart-toolbar input[type="date"] {
+        background-image: none;
+        padding: 0 5px;
+        width: 112px;
+        font-variant-numeric: tabular-nums;
+    }
+
+    .chart-ctl-dates { padding-left: 5px; }
+
+    .chart-dates-arrow {
+        color: var(--body-quiet-color, #b8b6b2);
+        font-size: 12px;
+        padding: 0 1px;
+    }
+
+    /* ── filters row ──────────────────────────────────────────────── */
+    .chart-filters-icon {
+        display: inline-flex;
+        color: var(--body-quiet-color, #b8b6b2);
+        padding: 0 7px 0 4px;
+    }
+
+    .chart-filters-icon svg {
+        width: 13px;
+        height: 13px;
+        fill: currentColor;
     }
 
     .chart-filter-removable {
-        display: flex;
+        display: inline-flex;
         align-items: center;
-        gap: 4px;
-        background: var(--body-bg, white);
-        border: 1px solid var(--border-color, #ddd);
-        border-radius: 4px;
-        padding: 4px 4px 4px 8px;
+        height: 26px;
+        background: var(--darkened-bg, #f8f7f6);
+        border: 1px solid var(--hairline-color, #e9e7e4);
+        border-radius: 13px;
+        padding: 0 2px 0 10px;
+        gap: 2px;
+        margin: 0 2px;
+    }
+
+    .chart-filter-removable > label {
+        font-size: 10.5px;
+        color: var(--body-quiet-color, #8f8d8a);
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        white-space: nowrap;
+    }
+
+    .chart-filter-removable select {
+        height: 22px;
+        max-width: 160px;
+    }
+
+    .chart-filter-removable select:hover {
+        background-color: var(--body-bg, #fff);
     }
 
     .chart-filter-remove-btn {
+        font: inherit;
+        font-size: 14px;
+        line-height: 1;
+        color: var(--body-quiet-color, #b8b6b2);
         background: none;
         border: none;
-        color: var(--body-quiet-color, #999);
-        font-size: 16px;
-        line-height: 1;
-        padding: 0 4px;
+        border-radius: 50%;
+        width: 20px;
+        height: 20px;
         cursor: pointer;
+        padding: 0;
+        transition: color 0.12s, background-color 0.12s;
     }
 
     .chart-filter-remove-btn:hover {
-        color: var(--error-fg, #dc3545);
-    }
-
-    .chart-time-range {
-        display: flex;
-        align-items: center;
-        gap: 6px;
-    }
-
-    .chart-time-range input[type="date"] {
-        width: 135px;
-    }
-
-    .chart-time-range-separator {
-        color: var(--body-quiet-color, #999);
-        font-weight: bold;
-    }
-
-    .chart-filter-actions {
-        display: flex;
-        gap: 6px;
-        margin-left: auto;
-        align-items: center;
-    }
-
-    .chart-filter-actions button,
-    .chart-filter-actions a {
-        padding: 5px 10px;
-        border: 1px solid var(--border-color, #ccc);
-        background: var(--body-bg, white);
-        border-radius: 3px;
-        cursor: pointer;
-        text-decoration: none;
-        color: var(--body-fg, #333);
-        font-size: 13px;
-    }
-
-    .chart-filter-actions button:hover,
-    .chart-filter-actions a:hover {
-        background: var(--darkened-bg, #f0f0f0);
+        color: var(--error-fg, #ba2121);
+        background: var(--darkened-bg, #f2f1ef);
     }
 
     .chart-add-filter {
         position: relative;
-        display: inline-block;
+        display: inline-flex;
+        margin: 0 2px;
     }
 
     .chart-add-filter-btn {
-        background: transparent;
-        border: 1px dashed var(--primary, #417690);
-        color: var(--primary, #417690);
-        padding: 4px 10px;
-        border-radius: 4px;
-        cursor: pointer;
+        font: inherit;
         font-size: 12px;
-        font-weight: 500;
+        color: var(--body-quiet-color, #8f8d8a);
+        background: none;
+        border: 1px solid transparent;
+        border-radius: 13px;
+        height: 26px;
+        padding: 0 10px;
+        cursor: pointer;
+        white-space: nowrap;
+        transition: color 0.12s, background-color 0.12s, border-color 0.12s;
     }
 
     .chart-add-filter-btn:hover {
-        background: var(--darkened-bg, #f0f7fa);
-        border-style: solid;
+        color: var(--secondary, #417690);
+        background: var(--darkened-bg, #f2f1ef);
+        border-color: var(--hairline-color, #e9e7e4);
     }
 
     .chart-add-filter-dropdown {
         position: absolute;
-        top: 100%;
+        top: calc(100% + 4px);
         left: 0;
-        margin-top: 4px;
-        background: var(--body-bg, white);
-        border: 1px solid var(--border-color, #ddd);
-        border-radius: 4px;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        min-width: 170px;
+        background: var(--body-bg, #fff);
+        border: 1px solid var(--hairline-color, #e9e7e4);
+        border-radius: 6px;
+        box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18);
         padding: 4px;
-        z-index: 1000;
         display: none;
-        min-width: 180px;
+        z-index: 40;
     }
 
-    .chart-add-filter-dropdown.show {
-        display: block;
-    }
+    .chart-add-filter-dropdown.show { display: block; }
 
     .chart-add-filter-option {
         display: block;
         width: 100%;
         text-align: left;
-        border: none;
-        background: none;
+        font: inherit;
+        font-size: 12.5px;
         color: var(--body-fg, #333);
-        padding: 6px 10px;
+        background: none;
+        border: none;
+        border-radius: 4px;
+        padding: 6px 9px;
         cursor: pointer;
-        border-radius: 3px;
-        font-size: 13px;
     }
 
     .chart-add-filter-option:hover,
     .chart-add-filter-option:focus {
-        background: var(--selected-row, #f0f7fa);
+        background: var(--darkened-bg, #f2f1ef);
+        outline: none;
+    }
+
+    /* ── actions ──────────────────────────────────────────────────── */
+    .chart-toolbar-actions {
+        display: inline-flex;
+        align-items: center;
+        gap: 2px;
+        margin-left: auto;
+        padding-left: 10px;
+    }
+
+    .chart-toolbar-actions button,
+    .chart-toolbar-actions a {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 4px;
+        font: inherit;
+        font-size: 11.5px;
+        color: var(--body-quiet-color, #8f8d8a);
+        background: none;
+        border: 1px solid transparent;
+        border-radius: 4px;
+        height: 26px;
+        min-width: 26px;
+        padding: 0 5px;
+        cursor: pointer;
+        text-decoration: none;
+        transition: color 0.12s, background-color 0.12s;
+    }
+
+    .chart-toolbar-actions button:hover,
+    .chart-toolbar-actions a:hover {
+        color: var(--secondary, #417690);
+        background: var(--darkened-bg, #f2f1ef);
+    }
+
+    .chart-toolbar-actions svg {
+        width: 14px;
+        height: 14px;
+        fill: currentColor;
+        flex: none;
     }
 
     @media (max-width: 768px) {
-        .chart-filter-bar {
-            padding: 8px 10px;
-            gap: 8px;
-        }
+        .chart-filter-removable > label { display: none; }
 
-        .chart-filter-sections {
-            gap: 8px;
-        }
-
-        .chart-filter-section {
-            border-right: none;
-            padding-right: 0;
-            gap: 6px;
-        }
-
-        .chart-filter-control label,
-        .chart-filter-removable label {
-            display: none;
-        }
-
-        .chart-filter-bar select,
-        .chart-filter-bar input[type="date"] {
-            font-size: 12px;
-            padding: 4px 6px;
-        }
-
-        .chart-time-range input[type="date"] {
-            width: 110px;
-        }
-
-        .chart-filter-actions {
+        .chart-toolbar-actions {
             margin-left: 0;
             width: 100%;
             justify-content: flex-end;
+            padding: 2px 0 0;
         }
+
+        .chart-toolbar input[type="date"] { width: 104px; }
     }
 </style>
-<form class="stateform chart-filter-bar" action="." method="POST" enctype="multipart/form-data">
+<form class="stateform chart-toolbar" action="." method="POST" enctype="multipart/form-data">
    <input type="hidden" name="csrfmiddlewaretoken" value="TEST-CSRF-TOKEN">
 
-   <div class="chart-filter-sections">
+   <div class="chart-toolbar-row">
 
-      <div class="chart-filter-section">
-         <div class="chart-filter-control">
-            <select name="select_box_chart_type" class="chart-input select_box_chart_type">
+      <span class="chart-ctl" title="Chart type">
+         <svg class="chart-type-icon" viewBox="0 0 16 16" aria-hidden="true">
+            <g data-icon="bar"><rect x="1.5" y="8" width="3.4" height="6.5" rx="0.6"/><rect x="6.3" y="4.5" width="3.4" height="10" rx="0.6"/><rect x="11.1" y="1.5" width="3.4" height="13" rx="0.6"/></g>
+            <g data-icon="line"><path d="M1 12.6l4.2-5.2 3 3 5.6-7.6 1.2 1L9.5 12l-3-3-3.9 4.8z"/></g>
+            <g data-icon="area"><path d="M1 14V9.5L5.5 5l3 3L15 1.5V14z"/></g>
+            <g data-icon="pie"><path d="M7.2 1.05A7 7 0 1 0 15 8.8H7.2z"/><path d="M8.8 0.5a7 7 0 0 1 6.7 6.7H8.8z" opacity="0.55"/></g>
+         </svg>
+         <select name="select_box_chart_type" class="chart-input select_box_chart_type">
   <option value="discreteBarChart" selected>Bar</option>
 
   <option value="lineChart">Line</option>
@@ -287,14 +334,13 @@
   <option value="lineWithFocusChart">Line With Focus</option>
 
 </select>
-         </div>
-      </div>
+      </span>
 
 
-      <div class="chart-filter-section">
 
-         <div class="chart-filter-control">
-            <select name="select_box_interval" class="chart-input">
+      <span class="chart-ctl" title="Time scale">
+         <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1a7 7 0 1 0 0 14A7 7 0 0 0 8 1zm0 12.5A5.5 5.5 0 1 1 8 2.5a5.5 5.5 0 0 1 0 11zM8.7 4.8H7.3V8.6l3 1.8.7-1.2-2.3-1.4z"/></svg>
+         <select name="select_box_interval" class="chart-input">
   <option value="hours">Hours</option>
 
   <option value="days" selected>Days</option>
@@ -308,24 +354,51 @@
   <option value="years">Years</option>
 
 </select>
-         </div>
-
-         <div class="chart-time-range">
-            <input type="date" name="time_since" value="2026-07-02" class="chart-input select_box_date_since" required>
-            <span class="chart-time-range-separator">→</span>
-            <input type="date" name="time_until" value="2026-08-02" class="chart-input select_box_date_until" required>
-         </div>
-      </div>
+      </span>
 
 
+      <span class="chart-ctl chart-ctl-dates" title="Date range">
+         <input type="date" name="time_since" value="2026-07-18" class="chart-input select_box_date_since" required>
+         <span class="chart-dates-arrow">→</span>
+         <input type="date" name="time_until" value="2026-08-18" class="chart-input select_box_date_until" required>
+      </span>
 
 
-      <div class="chart-filter-section chart-filters-section">
 
 
-               <div class="chart-filter-removable" data-filter-name="select_box_dynamic_1" data-filter-label="active">
-                  <label>active</label>
-                  <select name="select_box_dynamic_1" class="chart-input" required>
+
+
+
+
+
+      <span class="chart-toolbar-actions">
+         <button class="reload" id="reload" title="reload values from unfinished periods" type="button">
+            <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M13.9 3.4A7.2 7.2 0 1 0 15.2 8h-1.9a5.3 5.3 0 1 1-1.1-3.2L10 7h5.5V1.5l-1.6 1.9z"/></svg>
+         </button>
+
+         <button class="reload" id="reload_all" title="reload all visible values" type="button">
+            <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M13.9 3.4A7.2 7.2 0 1 0 15.2 8h-1.9a5.3 5.3 0 1 1-1.1-3.2L10 7h5.5V1.5l-1.6 1.9z"/></svg>all
+         </button>
+
+         <a href='/admin_tools_stats/analytics/?show=g1' target='_blank' title="Open in analytics">
+            <svg viewBox="0 0 16 16" aria-hidden="true"><rect x="1.5" y="8" width="3.4" height="6.5" rx="0.6"/><rect x="6.3" y="4.5" width="3.4" height="10" rx="0.6"/><rect x="11.1" y="1.5" width="3.4" height="13" rx="0.6"/></svg>
+         </a>
+         <a href='#' class="download-csv" data-graph-key="g1" title="Download chart data as CSV">
+            <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1v8.2L5.2 6.4 4 7.7 8 12l4-4.3-1.2-1.3L8 9.2V1zM2 13h12v2H2z"/></svg>
+         </a>
+      </span>
+   </div>
+
+
+   <div class="chart-toolbar-row chart-toolbar-filters">
+      <span class="chart-filters-icon" title="Filters">
+         <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M1 2h14l-5 6.3V14l-4-1.7V8.3z"/></svg>
+      </span>
+
+
+            <div class="chart-filter-removable" data-filter-name="select_box_dynamic_1" data-filter-label="active">
+               <label>active</label>
+               <select name="select_box_dynamic_1" class="chart-input" required>
   <option value="" selected>-------</option>
 
   <option value="">All</option>
@@ -335,8 +408,8 @@
   <option value="False">False</option>
 
 </select>
-                  <button type="button" class="chart-filter-remove-btn" data-field="select_box_dynamic_1" title="Remove filter">×</button>
-               </div>
+               <button type="button" class="chart-filter-remove-btn" data-field="select_box_dynamic_1" title="Remove filter">×</button>
+            </div>
 
 
 
@@ -349,22 +422,12 @@
 
 
 
-         <span class="chart-add-filter">
-            <button type="button" class="chart-add-filter-btn" aria-haspopup="true" aria-expanded="false">+ Add filter</button>
-            <div class="chart-add-filter-dropdown"></div>
-         </span>
-      </div>
-
+      <span class="chart-add-filter">
+         <button type="button" class="chart-add-filter-btn" aria-haspopup="true" aria-expanded="false">+ Add filter</button>
+         <div class="chart-add-filter-dropdown"></div>
+      </span>
    </div>
 
-   <div class="chart-filter-actions">
-      <button class="reload" id="reload" title="reload values from unfinished periods" type="button">⟳</button>
-
-      <button class="reload" id="reload_all" title="reload all visible values" type="button">⟳ all</button>
-
-      <a href='/admin_tools_stats/analytics/?show=g1' target='_blank' title="Open in analytics">📊 analytics</a>
-      <a href='#' class="download-csv" data-graph-key="g1" title="Download chart data as CSV">📥 CSV</a>
-   </div>
 
    <input type="hidden" name="graph_key" value="g1" class="hidden_graph_key">
 </form>
