@@ -208,6 +208,21 @@ class ChartDataViewContextTests(BaseSuperuserAuthenticatedClient):
             },
         )
 
+    def test_chart_script_shifts_x_to_the_browser_timezone(self):
+        """The x epochs are UTC midnights of the intended calendar days; the
+        script must shift them by the browser offset before rendering, or any
+        browser west of UTC shows every point a day early (issue #80)."""
+        baker.make("User", date_joined=datetime(2010, 10, 10, tzinfo=timezone.utc))
+        url = reverse("chart-data", kwargs={"graph_key": "user_graph"})
+        url += (
+            "?time_since=2010-10-08&time_until=2010-10-12&select_box_interval=days&"
+            "select_box_chart_type=stackedAreaChart&select_box_operation_field="
+        )
+        response = self.client.get(url)
+        content = response.content.decode()
+        self.assertIn("new Date(point.x).getTimezoneOffset() * 60000", content)
+        self.assertIn("data_chart_container_user_graph.forEach", content)
+
     def test_get_context(self):
         """
         Test function view rendering multi series with multiple operations
@@ -242,11 +257,11 @@ class ChartDataViewContextTests(BaseSuperuserAuthenticatedClient):
                     "name0": "",
                     "name1": Interval.days,
                     "x": [
-                        1286514000000,
-                        1286600400000,
-                        1286686800000,
-                        1286773200000,
-                        1286859600000,
+                        1286496000000,
+                        1286582400000,
+                        1286668800000,
+                        1286755200000,
+                        1286841600000,
                     ],
                     "y0": [0, 1, 0, 0, 0],
                 },
@@ -294,14 +309,14 @@ class ChartDataViewContextTests(BaseSuperuserAuthenticatedClient):
                     "name0": "",
                     "name1": Interval.days,
                     "x": [
-                        1635458400000,  # 2021-10-28 22:00:00 GMT
-                        1635544800000,
-                        1635631200000,
-                        1635721200000,
-                        1635807600000,
-                        1635894000000,
-                        1635980400000,
-                        1636066800000,  # 2021-11-04 23:00:00 GMT
+                        1635465600000,  # 2021-10-29 as a UTC-midnight epoch
+                        1635552000000,
+                        1635638400000,
+                        1635724800000,
+                        1635811200000,
+                        1635897600000,
+                        1635984000000,
+                        1636070400000,  # 2021-11-05; uniform 86400s steps even across DST
                     ],
                     "y0": [0, 1, 1, 1, 1, 1, 0, 0],
                 },
@@ -352,14 +367,14 @@ class ChartDataViewContextTests(BaseSuperuserAuthenticatedClient):
                     "name0": "",
                     "name1": Interval.days,
                     "x": [
-                        1635458400000,  # 2021-10-28 22:00:00 GMT
-                        1635544800000,
-                        1635631200000,
-                        1635721200000,
-                        1635807600000,
-                        1635894000000,
-                        1635980400000,
-                        1636066800000,  # 2021-11-04 23:00:00 GMT
+                        1635465600000,  # 2021-10-29 as a UTC-midnight epoch
+                        1635552000000,
+                        1635638400000,
+                        1635724800000,
+                        1635811200000,
+                        1635897600000,
+                        1635984000000,
+                        1636070400000,  # 2021-11-05; uniform 86400s steps even across DST
                     ],
                     "y0": [0, 150.0, 160.0, 170.0, 180.0, 200.0, 0, 0],
                 },

@@ -9,6 +9,15 @@ alert('{{ graph_title }} error: \n{{ error|escapejs }}');
 function loadChartScript(){
    d3.selectAll('.nvtooltip').remove();
    {% load_chart chart_type values chart_container extra %}
+   /* x values arrive as UTC epochs of the intended wall-clock time, but d3
+      formats epochs in the browser timezone; shifting each x by the browser's
+      own offset keeps every point on its intended calendar day. nv.addGraph
+      defers rendering to a setTimeout, so the data is adjusted in time. */
+   data_{{ chart_container }}.forEach(function(serie) {
+      serie.values.forEach(function(point) {
+         point.x += new Date(point.x).getTimezoneOffset() * 60000;
+      });
+   });
 };
 loadChartScript();
 {% endif %}
