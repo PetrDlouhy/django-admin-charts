@@ -1,6 +1,6 @@
+import calendar
 import csv
 import logging
-import time
 from collections import OrderedDict
 from datetime import datetime
 from decimal import Decimal
@@ -180,7 +180,11 @@ class ChartDataView(ChartDataMixin, TemplateView):
             series.keys(),
             key=lambda d: datetime(d.year, d.month, d.day, getattr(d, "hour", 0)),
         ):
-            xdata.append(int(time.mktime(date.timetuple()) * 1000))
+            # the wall-clock bucket serialized as if it were UTC; the chart
+            # template shifts each x by the browser's own offset, so the point
+            # renders on the intended calendar day in any browser timezone
+            # (previously time.mktime tied this to the *server* timezone)
+            xdata.append(int(calendar.timegm(date.timetuple()) * 1000))
             for key, value in series[date].items():
                 if key not in serie_i_map:
                     serie_i_map[key] = len(serie_i_map)
