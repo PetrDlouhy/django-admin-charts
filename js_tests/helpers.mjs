@@ -62,12 +62,31 @@ export function chartPage({ body = loadFixture("chart_form.html"), response = ""
 
     win.requests = [];
     win.nextResponse = response;
+    // set win.holdFetch = true to keep requests pending; each entry in
+    // win.pendingFetches then carries a resolve() to answer it manually
+    win.pendingFetches = [];
     win.fetch = (url, options) => {
-        win.requests.push({ url, options });
-        return Promise.resolve({
-            ok: win.nextStatus === undefined || win.nextStatus < 400,
-            status: win.nextStatus || 200,
-            text: () => Promise.resolve(win.nextResponse),
+        const request = { url, options };
+        win.requests.push(request);
+        return new Promise((resolve, reject) => {
+            const answer = () => resolve({
+                ok: win.nextStatus === undefined || win.nextStatus < 400,
+                status: win.nextStatus || 200,
+                text: () => Promise.resolve(win.nextResponse),
+            });
+            const signal = options && options.signal;
+            if (signal) {
+                signal.addEventListener("abort", () => {
+                    const error = new Error("aborted");
+                    error.name = "AbortError";
+                    reject(error);
+                });
+            }
+            if (win.holdFetch) {
+                win.pendingFetches.push({ request, resolve: answer });
+            } else {
+                answer();
+            }
         });
     };
 

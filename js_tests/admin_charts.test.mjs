@@ -107,6 +107,37 @@ describe("direct editing", () => {
     });
 });
 
+describe("stale request cancellation", () => {
+    it("aborts the in-flight request when a newer change supersedes it", async () => {
+        const win = chartPage({ response: CHART_SCRIPT });
+        await settle();
+        win.requests.length = 0;
+        win.holdFetch = true;
+
+        const input = win.document.querySelector('[name="time_since"]');
+        input.value = "2021-01-01";
+        input.dispatchEvent(new win.Event("change", { bubbles: true }));
+        input.value = "2022-02-02";
+        input.dispatchEvent(new win.Event("change", { bubbles: true }));
+        await settle();
+
+        assert.equal(win.requests.length, 2);
+        assert.ok(win.requests[0].options.signal.aborted, "older request must be aborted");
+        assert.ok(!win.requests[1].options.signal.aborted, "newest request stays live");
+
+        // the stale response arriving late must neither alert nor clear the
+        // spinner owned by the still-running newer request
+        win.pendingFetches[0].resolve();
+        await settle();
+        assert.deepEqual(win.alerts, []);
+        assert.ok(form(win).classList.contains("loading"));
+
+        win.pendingFetches[1].resolve();
+        await settle();
+        assert.ok(!form(win).classList.contains("loading"));
+    });
+});
+
 describe("chart type icon", () => {
     function iconGroups(win) {
         var groups = {};
