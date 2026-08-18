@@ -488,6 +488,31 @@ function loadAnalyticsChart(chart_key){
    chartElement.style.display = '';
 }
 
+// load each dashboard chart when it scrolls near the viewport instead of
+// firing every chart's (potentially expensive) query on page load; the
+// margin starts the load slightly before the module becomes visible
+function lazyLoadAdminCharts() {
+   // the misspelled class stays matched for markup rendered by older templates
+   const elements = document.querySelectorAll('.admin_charts_dynamic, .admin_chanrts_dynamic');
+   if (!('IntersectionObserver' in window)) {
+      elements.forEach(function(element) {
+         loadAdminChart(element.dataset.chartKey);
+      });
+      return;
+   }
+   const observer = new IntersectionObserver(function(entries) {
+      entries.forEach(function(entry) {
+         if (entry.isIntersecting) {
+            observer.unobserve(entry.target);
+            loadAdminChart(entry.target.dataset.chartKey);
+         }
+      });
+   }, {rootMargin: '200px'});
+   elements.forEach(function(element) {
+      observer.observe(element);
+   });
+}
+
 function loadAdminChart(chart_key){
    const chartElement = document.getElementById("chart_element_" + chart_key);
    if (!chartElement) {

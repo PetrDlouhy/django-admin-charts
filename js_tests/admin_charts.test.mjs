@@ -504,6 +504,62 @@ describe("chart html loading", () => {
     });
 });
 
+describe("lazy chart loading", () => {
+    function chartElement(win, key) {
+        const el = win.document.createElement("div");
+        el.id = "chart_element_" + key;
+        el.className = "admin_charts admin_charts_dynamic notloaded";
+        el.dataset.chartKey = key;
+        win.document.body.appendChild(el);
+        return el;
+    }
+
+    it("loads a chart only once it scrolls near the viewport", async () => {
+        const win = chartPage();
+        await settle();
+        const el = chartElement(win, "g2");
+        win.requests.length = 0;
+
+        const observed = [];
+        let intersect = null;
+        const unobserved = [];
+        win.IntersectionObserver = class {
+            constructor(callback) { intersect = callback; }
+            observe(target) { observed.push(target); }
+            unobserve(target) { unobserved.push(target); }
+        };
+
+        win.lazyLoadAdminCharts();
+        await settle();
+        assert.deepEqual(observed, [el]);
+        assert.equal(win.requests.length, 0, "off-screen charts must not load");
+
+        intersect([{ target: el, isIntersecting: false }]);
+        await settle();
+        assert.equal(win.requests.length, 0, "not intersecting yet");
+
+        intersect([{ target: el, isIntersecting: true }]);
+        await settle();
+        assert.equal(win.requests.length, 1);
+        assert.ok(win.requests[0].url.startsWith(URLS.analyticsChart + "g2"), win.requests[0].url);
+        assert.deepEqual(unobserved, [el], "a loaded chart must not load twice");
+    });
+
+    it("falls back to loading everything when IntersectionObserver is missing", async () => {
+        const win = chartPage();
+        await settle();
+        chartElement(win, "g3");
+        win.requests.length = 0;
+        assert.equal(win.IntersectionObserver, undefined);
+
+        win.lazyLoadAdminCharts();
+        await settle();
+
+        assert.equal(win.requests.length, 1);
+        assert.ok(win.requests[0].url.startsWith(URLS.analyticsChart + "g3"), win.requests[0].url);
+    });
+});
+
 describe("csv download", () => {
     it("is delegated to the link's own form", async () => {
         const win = chartPage();
