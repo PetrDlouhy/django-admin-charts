@@ -8,14 +8,22 @@
     }
 
     form.loading::after {
-         content: " ";
-         height: 31px;
-         width: 31px;
+         content: "";
+         height: 22px;
+         width: 22px;
          display: inline-block;
-         background: rgba( 255, 255, 255, .8 )
-                url('http://i.stack.imgur.com/FhHRx.gif')
-                50% 50%
-                no-repeat;
+         border: 3px solid var(--hairline-color, #ddd);
+         border-top-color: var(--secondary, #417690);
+         border-radius: 50%;
+         animation: chart-toolbar-spin 0.8s linear infinite;
+    }
+
+    @keyframes chart-toolbar-spin {
+        to { transform: rotate(360deg); }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        form.loading::after { animation-duration: 2s; }
     }
 
     /* ── flat toolbar: no frame, ghost controls, role icons ───────── */
@@ -99,6 +107,13 @@
     .chart-toolbar select:focus,
     .chart-toolbar input[type="date"]:focus {
         outline: none;
+    }
+
+    /* the popup list renders with UA colors; on a dark admin that pairs the
+       theme's light text with a white list, so pin both to the theme */
+    .chart-toolbar select option {
+        background-color: var(--body-bg, #fff);
+        color: var(--body-fg, #333);
     }
 
     .chart-toolbar input[type="date"] {
@@ -280,6 +295,36 @@
         height: 14px;
         fill: currentColor;
         flex: none;
+    }
+
+    /* nvd3 hardcodes light colors; re-key text, grid and tooltip to the
+       admin theme variables so dark mode stays readable */
+    .nvd3 text {
+        fill: var(--body-fg, #333);
+    }
+
+    .nvd3 .nv-axis line {
+        stroke: var(--hairline-color, #e5e5e5);
+    }
+
+    .nvd3 .nv-axis path {
+        stroke: var(--border-color, #000);
+    }
+
+    .nvtooltip {
+        background: var(--body-bg, rgba(255, 255, 255, 1));
+        color: var(--body-fg, rgba(0, 0, 0, 1));
+        border: 1px solid var(--border-color, rgba(0, 0, 0, .2));
+    }
+
+    .nvtooltip h3 {
+        background-color: var(--darkened-bg, rgba(247, 247, 247, .75));
+        color: var(--body-fg, rgba(0, 0, 0, 1));
+        border-bottom: 1px solid var(--hairline-color, #ebebeb);
+    }
+
+    .nvtooltip table td.legend-color-guide div {
+        border: 1px solid var(--border-color, #999);
     }
 
     @media (max-width: 768px) {
