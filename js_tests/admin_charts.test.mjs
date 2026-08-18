@@ -532,6 +532,28 @@ describe("lazy chart loading", () => {
         );
     });
 
+    it("loads everything when the observer exists but never delivers", async () => {
+        const win = chartPage();
+        await settle();
+        chartElement(win, "g4");
+        win.requests.length = 0;
+        win.LAZY_CHARTS_FALLBACK_MS = 30;
+        win.IntersectionObserver = class {
+            constructor() {}
+            observe() {}
+            disconnect() {}
+        };
+
+        win.lazyLoadAdminCharts();
+        await settle();
+        assert.equal(win.requests.length, 0, "nothing yet - waiting for the observer");
+
+        await new Promise((resolve) => setTimeout(resolve, 60));
+        await settle();
+        assert.equal(win.requests.length, 1, "the fallback must load the chart");
+        assert.ok(win.requests[0].url.startsWith(URLS.analyticsChart + "g4"), win.requests[0].url);
+    });
+
     it("re-renders a chart when its container width settles after layout", async () => {
         const win = chartPage({ response: CHART_SCRIPT });
         await settle();

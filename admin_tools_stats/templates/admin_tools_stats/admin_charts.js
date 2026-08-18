@@ -476,16 +476,31 @@ function loadAnalyticsChart(chart_key){
 // load each dashboard chart when it scrolls near the viewport instead of
 // firing every chart's (potentially expensive) query on page load; the
 // margin starts the load slightly before the module becomes visible
+// a healthy IntersectionObserver delivers an initial entry for every observed
+// target right away; an environment that never delivers any (some embedded
+// webviews) would otherwise load no chart at all
+var LAZY_CHARTS_FALLBACK_MS = 3000;
+
 function lazyLoadAdminCharts() {
    // the misspelled class stays matched for markup rendered by older templates
    const elements = document.querySelectorAll('.admin_charts_dynamic, .admin_chanrts_dynamic');
-   if (!('IntersectionObserver' in window)) {
-      elements.forEach(function(element) {
-         loadAdminChart(element.dataset.chartKey);
-      });
+   if (!elements.length) {
       return;
    }
+   const loadAll = function() {
+      elements.forEach(function(element) {
+         if (element.classList.contains('notloaded')) {
+            loadAdminChart(element.dataset.chartKey);
+         }
+      });
+   };
+   if (!('IntersectionObserver' in window)) {
+      loadAll();
+      return;
+   }
+   let delivered = false;
    const observer = new IntersectionObserver(function(entries) {
+      delivered = true;
       entries.forEach(function(entry) {
          if (entry.isIntersecting) {
             observer.unobserve(entry.target);
@@ -496,6 +511,12 @@ function lazyLoadAdminCharts() {
    elements.forEach(function(element) {
       observer.observe(element);
    });
+   setTimeout(function() {
+      if (!delivered) {
+         observer.disconnect();
+         loadAll();
+      }
+   }, LAZY_CHARTS_FALLBACK_MS);
 }
 
 // the dashboard arranges its columns while charts load, so a chart can
