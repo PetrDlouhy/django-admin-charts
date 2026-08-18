@@ -1,7 +1,7 @@
 Changelog
 =========
 
-1.8.0 (unreleased)
+1.8.0 (2026-08-18)
 ------------------
 
 Backwards incompatible
