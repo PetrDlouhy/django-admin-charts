@@ -612,5 +612,10 @@ defer( function(){
          initToolbar(form);
          loadAnchor(form);
       });
+
+      // dashboard chart modules load lazily; registered here rather than in
+      // an inline template script, which would run before this file is loaded
+      // and could not name the function yet
+      lazyLoadAdminCharts();
    });
 });
