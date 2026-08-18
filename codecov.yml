@@ -1,0 +1,21 @@
+# The suite covers 100% of the package - as the union of the postgres and
+# mysql runs: DB-specific branches (e.g. Median via PERCENTILE_CONT) can only
+# execute on their own backend, so no single CI job reaches 100% alone and
+# fail_under in the test jobs cannot enforce this. Codecov merges the flags
+# and holds the line here.
+coverage:
+  status:
+    project:
+      default:
+        target: 100%
+        threshold: 0%
+    patch:
+      default:
+        target: 100%
+        threshold: 0%
+
+flag_management:
+  default_rules:
+    # a partial CI rerun uploads only some flags; carrying the missing flag
+    # forward keeps the union honest instead of failing on absent data
+    carryforward: true
