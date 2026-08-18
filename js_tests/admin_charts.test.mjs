@@ -107,6 +107,43 @@ describe("direct editing", () => {
     });
 });
 
+describe("chart type icon", () => {
+    function iconGroups(win) {
+        var groups = {};
+        win.document.querySelectorAll(".chart-type-icon g").forEach(function (g) {
+            groups[g.getAttribute("data-icon")] = g.style.display;
+        });
+        return groups;
+    }
+
+    it("shows the selected type's icon on load", async () => {
+        const win = chartPage();
+        await settle();
+        // the fixture's chart defaults to discreteBarChart
+        // the stylesheet hides every group, so the visible one must carry an
+        // explicit inline display - an empty string would fall back to hidden
+        const groups = iconGroups(win);
+        assert.equal(groups.bar, "inline");
+        assert.equal(groups.line, "none");
+        assert.equal(groups.area, "none");
+        assert.equal(groups.pie, "none");
+    });
+
+    it("follows a chart type change", async () => {
+        const win = chartPage();
+        await settle();
+
+        const select = win.document.querySelector(".select_box_chart_type");
+        select.value = "stackedAreaChart";
+        select.dispatchEvent(new win.Event("change", { bubbles: true }));
+        await settle();
+
+        const groups = iconGroups(win);
+        assert.equal(groups.area, "inline");
+        assert.equal(groups.bar, "none");
+    });
+});
+
 describe("filter chips", () => {
     function chip(win) {
         return win.document.querySelector(".chart-filter-removable");

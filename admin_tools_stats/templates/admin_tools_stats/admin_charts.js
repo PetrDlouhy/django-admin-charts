@@ -298,6 +298,38 @@ function removeFilter(button) {
    }
 }
 
+// the role icon in front of the chart-type select mirrors the selection
+var CHART_TYPE_ICONS = {
+   discreteBarChart: 'bar',
+   multiBarChart: 'bar',
+   multiBarHorizontalChart: 'bar',
+   linePlusBarChart: 'bar',
+   lineChart: 'line',
+   cumulativeLineChart: 'line',
+   lineWithFocusChart: 'line',
+   scatterChart: 'line',
+   stackedAreaChart: 'area',
+   pieChart: 'pie'
+};
+
+function updateChartTypeIcon(select) {
+   const ctl = select.closest('.chart-ctl');
+   const icon = ctl ? ctl.querySelector('.chart-type-icon') : null;
+   if (!icon) {
+      return;
+   }
+   const kind = CHART_TYPE_ICONS[select.value] || 'bar';
+   icon.querySelectorAll('g').forEach(function(group) {
+      // the stylesheet hides every group; an explicit 'inline' is needed to win
+      group.style.display = group.getAttribute('data-icon') === kind ? 'inline' : 'none';
+   });
+}
+
+function initToolbar(form) {
+   hideEmptyFilters(form);
+   form.querySelectorAll('.select_box_chart_type').forEach(updateChartTypeIcon);
+}
+
 // a filter whose select carries no value does not constrain the chart, so it
 // starts folded away behind the "+ Add filter" button
 function hideEmptyFilters(form) {
@@ -314,7 +346,7 @@ function loadChartForms(chartElement, chart_key){
    visibleForms(chartElement).forEach(function(form) {
       populateFormFromUrl(form, chart_key);
       updateAnalyticsLink(form, chart_key);
-      hideEmptyFilters(form);
+      initToolbar(form);
       loadAnchor(form);
    });
 }
@@ -385,6 +417,9 @@ defer( function(){
    onReady(function() {
 
       document.body.addEventListener('change', function(event) {
+         if (event.target.matches('.select_box_chart_type')) {
+            updateChartTypeIcon(event.target);
+         }
          if (event.target.matches('.chart-input')) {
             loadAnchor(event.target);
          }
@@ -427,7 +462,7 @@ defer( function(){
       });
 
       visibleForms(document).forEach(function(form) {
-         hideEmptyFilters(form);
+         initToolbar(form);
          loadAnchor(form);
       });
    });
