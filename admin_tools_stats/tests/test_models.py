@@ -1393,6 +1393,50 @@ class ModelTests(TestCase):
                 }
                 self.assertDictEqual(serie, testing_data)
 
+    def test_group_by_divide_field_eligibility(self):
+        """Only a plain dynamic field qualifies for the one-query GROUP BY
+        path; mappings, __isnull criteria and the several-operations mode
+        keep the one-filtered-aggregate-per-choice path."""
+        stats = baker.make(
+            "DashboardStats",
+            model_name="TestKid",
+            date_field_name="appointment",
+            model_app_name="demoproject",
+        )
+        plain = baker.make(
+            "CriteriaToStatsM2M",
+            criteria=baker.make("DashboardStatsCriteria", dynamic_criteria_field_name="name"),
+            stats=stats,
+            use_as="multiple_series",
+        )
+        self.assertEqual(stats._group_by_divide_field(plain, [], None), "name")
+        self.assertIsNone(stats._group_by_divide_field(None, [], None))
+
+        isnull = baker.make(
+            "CriteriaToStatsM2M",
+            criteria=baker.make(
+                "DashboardStatsCriteria", dynamic_criteria_field_name="height__isnull"
+            ),
+            stats=stats,
+            use_as="multiple_series",
+        )
+        self.assertIsNone(stats._group_by_divide_field(isnull, [], None))
+
+        mapped = baker.make(
+            "CriteriaToStatsM2M",
+            criteria=baker.make(
+                "DashboardStatsCriteria",
+                dynamic_criteria_field_name="name",
+                criteria_dynamic_mapping={"": [None, "All"], "foo": ["Foo", "Foo kids"]},
+            ),
+            stats=stats,
+            use_as="multiple_series",
+        )
+        self.assertIsNone(stats._group_by_divide_field(mapped, [], None))
+
+        # several-operations mode: the series are operations, not choices
+        self.assertIsNone(stats._group_by_divide_field(plain, ["age", "height"], ""))
+
     @override_settings(USE_TZ=True, TIME_ZONE="UTC")
     def test_get_multi_series_criteria_isnull(self):
         """
