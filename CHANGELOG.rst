@@ -13,8 +13,36 @@ Backwards incompatible
   folded away. Projects styling or scripting against the old form markup need to adapt
 * **the load-on-change checkbox is gone** - every control change applies immediately;
   the reload buttons stay for forced recalculation
+* **chart x values are timezone-independent now**: the epoch sent to the browser is the
+  UTC interpretation of the bucket's wall-clock time and the chart script shifts it by
+  the browser offset, so every point renders on its intended calendar day everywhere.
+  Previously ``time.mktime`` tied the epochs to the *server* timezone and browsers west
+  of it plotted the data a day early (#80)
+* **chart failures no longer raise blocking** ``alert()`` **dialogs** - every failure
+  renders as a note inside the chart's own content area, with a Retry button where
+  retrying can help; application errors from the chart data view arrive as a
+  ``chartShowServerError()`` call and the view's error context now carries ``graph_key``
+* ``AppLabelRenamer`` is removed - ``AppConfig.verbose_name`` has provided the readable
+  admin app name since Django 1.7; projects importing the helper must drop the import
 * the ``.admin_charts`` wrapper on the admin index lost its large built-in padding; the
   toolbar now sits directly under the module header
+* the time-range validation raises ``ValueError`` instead of a bare ``Exception``
+
+Features
+~~~~~~~~
+
+* **dashboard charts load lazily**: each chart's data request fires when the module
+  scrolls near the viewport instead of all at page load; charts re-render when their
+  container width settles after layout, and environments whose ``IntersectionObserver``
+  never delivers fall back to loading everything
+* **a filter select with 16 or more options opens a searchable panel** - type to
+  filter, click or Enter to pick; the native popup stays for short lists (#57)
+* **one GROUP BY query computes a plain-field divide**: previously every choice added
+  its own filtered aggregate to the SQL, so a 1000-choice divide built a 1000-aggregate
+  query; benchmarked ~6x faster on PostgreSQL with 200k rows over a year
+* the README gained a "Configuring charts" section - aggregation fields, criteria
+  field-path forms, chart filter vs. multiple series, ``count_limit`` and cached
+  values (#61, #85)
 
 Fixes
 ~~~~~
@@ -22,6 +50,15 @@ Fixes
 * charts are readable on the admin dark theme (#84): axis and legend text, gridlines,
   the tooltip and the select popup lists follow the admin CSS variables, with the
   original light colors as fallbacks
+* **a failed chart request can no longer restyle the whole admin**: an overload page,
+  proxy error or login redirect answers with a complete document whose stylesheets used
+  to be injected into the page; such responses are refused and reported inside the chart
+* **rapid control changes no longer race**: starting a chart load aborts the previous
+  in-flight request, so the rendered chart always matches the visible settings
+* **the last known filter choices serve when the choices query fails**: the dynamic
+  choices query over a big table can exceed the statement timeout once its cached copy
+  expires; a never-expiring stale copy keeps the chart form rendering (explicit
+  invalidation still discards it)
 * the loading indicator no longer loads a gif over plain http from i.stack.imgur.com;
   it is a CSS spinner in theme colors that respects ``prefers-reduced-motion``
 * the chart-form fixture comparison no longer fails on any day other than the one the
@@ -30,6 +67,14 @@ Fixes
   dying mid-run
 * the misspelled ``admin_chanrts_dynamic`` class is deprecated in favor of
   ``admin_charts_dynamic``; the old name stays on the element for now
+
+Development
+~~~~~~~~~~~
+
+* codecov enforces the 100% coverage line explicitly (project and patch targets pinned,
+  flags carry forward), instead of the silently ratcheting auto targets
+* the git-flow ``update_version.sh`` script is gone; zest.releaser is the release
+  mechanism
 
 1.7.0 (2026-07-31)
 ------------------
