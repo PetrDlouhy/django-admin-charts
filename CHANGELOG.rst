@@ -1,6 +1,36 @@
 Changelog
 =========
 
+1.8.0 (unreleased)
+------------------
+
+Backwards incompatible
+~~~~~~~~~~~~~~~~~~~~~~
+
+* **the chart form becomes a flat, icon-led toolbar** (chart type with a dynamic icon,
+  time scale, date range, operation, field, divide), with the chart filters on their own
+  row as removable pill chips behind a "+ Add filter" button - an empty filter starts
+  folded away. Projects styling or scripting against the old form markup need to adapt
+* **the load-on-change checkbox is gone** - every control change applies immediately;
+  the reload buttons stay for forced recalculation
+* the ``.admin_charts`` wrapper on the admin index lost its large built-in padding; the
+  toolbar now sits directly under the module header
+
+Fixes
+~~~~~
+
+* charts are readable on the admin dark theme (#84): axis and legend text, gridlines,
+  the tooltip and the select popup lists follow the admin CSS variables, with the
+  original light colors as fallbacks
+* the loading indicator no longer loads a gif over plain http from i.stack.imgur.com;
+  it is a CSS spinner in theme colors that respects ``prefers-reduced-motion``
+* the chart-form fixture comparison no longer fails on any day other than the one the
+  fixture was regenerated on
+* ``recalculate_charts`` survives a broken chart and reports it at the end instead of
+  dying mid-run
+* the misspelled ``admin_chanrts_dynamic`` class is deprecated in favor of
+  ``admin_charts_dynamic``; the old name stays on the element for now
+
 1.7.0 (2026-07-31)
 ------------------
 
