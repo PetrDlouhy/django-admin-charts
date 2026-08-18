@@ -102,6 +102,67 @@ Open Django admin root and add your ``Dashboard Stats`` configuration:
 
 Then the charts will appear on the root of Django admin page as well as on analytics page (``/admin_tools_stats/analytics/``).
 
+==================
+Configuring charts
+==================
+
+Every chart is one ``Dashboard Stats`` row. The fields that define what gets counted:
+
+* ``model app name`` / ``model name`` - the model the chart aggregates, e.g. ``shop`` / ``Order``
+* ``date field name`` - the ``DateField``/``DateTimeField`` the x-axis buckets by, e.g. ``created``
+* ``operation field name`` - the field the operation aggregates, e.g. ``total_price``; leave empty
+  for plain ``Count`` of rows
+* ``type operation field name`` - the aggregation: ``Count``, ``Sum``, ``Avg``, ``Median``, ``Max``,
+  ``Min``, ``StdDev``, ``Variance`` or ``AvgCountPerInstance``
+* ``graph key`` - unique slug identifying the chart
+
+Example - "orders per day": ``model name`` = ``Order``, ``date field name`` = ``created``, operation
+``Count``. Example - "revenue per month": the same plus ``operation field name`` = ``total_price``
+and operation ``Sum``.
+
+Filtering and dividing by criteria
+----------------------------------
+
+A ``Dashboard Stats Criteria`` row describes one way to slice the model, and gets attached to a
+chart in the *criteria* inline of the ``Dashboard Stats`` admin. The same criteria can be reused by
+several charts. Its key field is ``dynamic criteria field name`` - a field path on the chart's
+model, using ordinary ORM lookups:
+
+* ``status`` - a plain field; every distinct value becomes a choice (model field ``choices``
+  labels are used when defined)
+* ``author__username`` - a related field path works too
+* ``paid_at__isnull`` - an ``__isnull`` path gives a Blank/Non-blank choice pair
+* leave the field empty and fill ``criteria dynamic mapping`` with JSON like
+  ``{"": [null, "All"], "big": [["gold", "platinum"], "Big plans"]}`` to define custom
+  buckets - each key maps to ``[database value or list of values, label]``
+
+How the criteria behaves depends on the *use as* field of the attachment:
+
+* **Chart filter** - renders as a select in the chart's toolbar; picking a value filters the
+  whole chart
+* **Multiple series** - divides the chart into one stacked serie per choice (the "Divide" select)
+
+Example - the "stack by user" scenario: a ``Plan`` model with a ``user`` foreign key and a
+``created`` date field. Create a criteria with ``dynamic criteria field name`` =
+``user__username``, attach it to the chart with *use as* = ``Multiple series``, and every user
+becomes one serie of the stacked chart.
+
+Options on the attachment row:
+
+* ``count limit`` - keep only the N largest choices as their own series and merge the rest into
+  one ``other`` serie; essential for high-cardinality fields like users
+* ``choices based on time range`` - compute the choices from rows in the displayed time range
+  instead of all distinct values
+* ``default option`` - the filter value preselected when the chart loads
+
+Big tables
+----------
+
+For charts too slow to compute on every view, tick ``cache values``. Values are then served from
+the ``CachedValue`` table and recomputed only for unfinished periods (the ``⟳`` toolbar button, or
+``⟳ all`` to recalculate everything visible). The ``recalculate_charts`` management command
+refreshes cached charts from cron.
+
 ======================
 Special configurations
 ======================
