@@ -1393,6 +1393,56 @@ class ModelTests(TestCase):
                 }
                 self.assertDictEqual(serie, testing_data)
 
+    def test_stale_choices_serve_when_the_query_fails(self):
+        """A choices query over a big table can exceed the statement timeout
+        once its cached copy expires; the last successful result must keep
+        the chart form rendering (issue seen on the addon_downloads chart)."""
+        from unittest import mock
+
+        from django.core.cache import cache
+        from django.db import DatabaseError
+
+        stats = baker.make(
+            "DashboardStats",
+            model_name="TestKid",
+            date_field_name="appointment",
+            model_app_name="demoproject",
+        )
+        m2m = baker.make(
+            "CriteriaToStatsM2M",
+            criteria=baker.make("DashboardStatsCriteria", dynamic_criteria_field_name="name"),
+            stats=stats,
+            use_as="chart_filter",
+        )
+        baker.make("TestKid", name="Foo", appointment=date(2010, 10, 12))
+
+        # no successful computation yet: the failure must propagate
+        with mock.patch.object(
+            type(m2m), "_compute_dynamic_choices", side_effect=DatabaseError("timeout")
+        ):
+            with self.assertRaises(DatabaseError):
+                m2m.get_dynamic_choices()
+
+        # TTL 0: the fresh copy expires immediately, only the stale copy stays
+        with mock.patch.object(type(m2m), "_DYN_CHOICES_TTL", 0):
+            good = m2m.get_dynamic_choices()
+        self.assertIn("Foo", good)
+
+        # recompute fails - the stale copy serves
+        with mock.patch.object(
+            type(m2m), "_compute_dynamic_choices", side_effect=DatabaseError("timeout")
+        ):
+            self.assertEqual(m2m.get_dynamic_choices(), good)
+
+        # explicit invalidation means the choices are wrong - it must NOT serve
+        m2m.invalidate_dynamic_choices()
+        with mock.patch.object(
+            type(m2m), "_compute_dynamic_choices", side_effect=DatabaseError("timeout")
+        ):
+            with self.assertRaises(DatabaseError):
+                m2m.get_dynamic_choices()
+        cache.clear()
+
     def test_group_by_divide_field_eligibility(self):
         """Only a plain dynamic field qualifies for the one-query GROUP BY
         path; mappings, __isnull criteria and the several-operations mode
