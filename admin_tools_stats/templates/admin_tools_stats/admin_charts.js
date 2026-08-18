@@ -615,7 +615,13 @@ defer( function(){
 
       // dashboard chart modules load lazily; registered here rather than in
       // an inline template script, which would run before this file is loaded
-      // and could not name the function yet
-      lazyLoadAdminCharts();
+      // and could not name the function yet. Waiting for window load matters:
+      // the admin_tools dashboard arranges its columns during page load, and
+      // a chart rendered before that measures a pre-layout container width
+      if (document.readyState === 'complete') {
+         lazyLoadAdminCharts();
+      } else {
+         window.addEventListener('load', lazyLoadAdminCharts);
+      }
    });
 });
