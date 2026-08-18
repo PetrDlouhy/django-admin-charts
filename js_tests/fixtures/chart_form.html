@@ -135,6 +135,7 @@
     }
 
     .chart-filter-removable {
+        position: relative;
         display: inline-flex;
         align-items: center;
         height: 26px;
@@ -241,6 +242,67 @@
 
     .chart-add-filter-option:hover,
     .chart-add-filter-option:focus {
+        background: var(--darkened-bg, #f2f1ef);
+        outline: none;
+    }
+
+    /* searchable panel replacing very long filter selects */
+    .chart-select-search {
+        position: absolute;
+        top: calc(100% + 4px);
+        left: 0;
+        min-width: 200px;
+        background: var(--body-bg, #fff);
+        border: 1px solid var(--hairline-color, #e9e7e4);
+        border-radius: 6px;
+        box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18);
+        padding: 4px;
+        z-index: 40;
+    }
+
+    .chart-select-search input {
+        width: 100%;
+        box-sizing: border-box;
+        font: inherit;
+        font-size: 12.5px;
+        color: var(--body-fg, #333);
+        background: var(--darkened-bg, #f8f7f6);
+        border: 1px solid var(--hairline-color, #e9e7e4);
+        border-radius: 4px;
+        padding: 4px 7px;
+        margin-bottom: 4px;
+    }
+
+    .chart-select-search input:focus {
+        outline: none;
+        border-color: var(--secondary, #417690);
+    }
+
+    .chart-select-search-list {
+        max-height: 240px;
+        overflow-y: auto;
+    }
+
+    .chart-select-search-option {
+        display: block;
+        width: 100%;
+        text-align: left;
+        font: inherit;
+        font-size: 12.5px;
+        color: var(--body-fg, #333);
+        background: none;
+        border: none;
+        border-radius: 4px;
+        padding: 5px 8px;
+        cursor: pointer;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .chart-select-search-option:hover,
+    .chart-select-search-option:focus,
+    .chart-select-search-option.selected {
         background: var(--darkened-bg, #f2f1ef);
         outline: none;
     }

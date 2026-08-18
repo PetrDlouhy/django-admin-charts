@@ -330,6 +330,69 @@ function initToolbar(form) {
    form.querySelectorAll('.select_box_chart_type').forEach(updateChartTypeIcon);
 }
 
+// past this many options a native select popup stops being navigable, so the
+// filter chips swap it for a small searchable panel (issue #57)
+var SEARCHABLE_SELECT_MIN_OPTIONS = 16;
+
+function closeSelectSearch() {
+   document.querySelectorAll('.chart-select-search').forEach(function(panel) {
+      panel.remove();
+   });
+}
+
+function openSelectSearch(select) {
+   closeSelectSearch();
+   const chip = select.closest('.chart-filter-removable');
+   const panel = document.createElement('div');
+   panel.className = 'chart-select-search';
+   const input = document.createElement('input');
+   input.type = 'search';
+   input.placeholder = 'Search…';
+   const list = document.createElement('div');
+   list.className = 'chart-select-search-list';
+   panel.appendChild(input);
+   panel.appendChild(list);
+
+   function fill(term) {
+      list.innerHTML = '';
+      Array.prototype.forEach.call(select.options, function(option) {
+         if (term && option.text.toLowerCase().indexOf(term.toLowerCase()) === -1) {
+            return;
+         }
+         const button = document.createElement('button');
+         button.type = 'button';
+         button.className = 'chart-select-search-option';
+         button.textContent = option.text;
+         if (option.value === select.value && option.index === select.selectedIndex) {
+            button.classList.add('selected');
+         }
+         button.addEventListener('click', function() {
+            select.selectedIndex = option.index;
+            closeSelectSearch();
+            select.dispatchEvent(new Event('change', {bubbles: true}));
+         });
+         list.appendChild(button);
+      });
+   }
+
+   fill('');
+   input.addEventListener('input', function() {
+      fill(input.value);
+   });
+   input.addEventListener('keydown', function(event) {
+      if (event.key === 'Enter') {
+         event.preventDefault();
+         const first = list.querySelector('button');
+         if (first) {
+            first.click();
+         }
+      }
+   });
+
+   (chip || select.parentElement).appendChild(panel);
+   input.focus();
+}
+
 // a filter whose select carries no value does not constrain the chart, so it
 // starts folded away behind the "+ Add filter" button
 function hideEmptyFilters(form) {
@@ -425,9 +488,21 @@ defer( function(){
          }
       });
 
+      document.body.addEventListener('mousedown', function(event) {
+         const select = event.target.closest('.chart-filter-removable select');
+         if (select && select.options.length >= SEARCHABLE_SELECT_MIN_OPTIONS) {
+            event.preventDefault();
+            openSelectSearch(select);
+         }
+      });
+
       document.body.addEventListener('click', function(event) {
          if (!event.target.closest('.chart-add-filter')) {
             closeAddFilterDropdowns();
+         }
+         if (!event.target.closest('.chart-select-search') &&
+             !event.target.closest('.chart-filter-removable select')) {
+            closeSelectSearch();
          }
          const reloadButton = event.target.closest('.reload');
          if (reloadButton) {
@@ -458,6 +533,7 @@ defer( function(){
       document.addEventListener('keydown', function(event) {
          if (event.key === 'Escape') {
             closeAddFilterDropdowns();
+            closeSelectSearch();
          }
       });
 
