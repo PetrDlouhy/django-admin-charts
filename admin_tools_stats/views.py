@@ -156,6 +156,7 @@ class ChartDataView(ChartDataMixin, TemplateView):
                 "'admin_tools_stats | dashboard stats | Can view dashboard stats'"
             )
             context["graph_title"] = dashboard_stats.graph_title
+            context["graph_key"] = graph_key
             return context
 
         try:
@@ -165,6 +166,7 @@ class ChartDataView(ChartDataMixin, TemplateView):
                 raise
             context["error"] = str(e)
             context["graph_title"] = dashboard_stats.graph_title
+            context["graph_key"] = graph_key
             logger.exception(e)
             return context
 

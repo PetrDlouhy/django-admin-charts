@@ -317,26 +317,40 @@ describe("chart script handling", () => {
         await settle();
         assert.equal(Object.keys(win.chart_scripts).length, 1);
 
-        // a chart whose data view fails answers with an alert and defines no
-        // loadChartScript; caching the previous one here would replay the wrong
-        // chart on the next identical request
+        // a chart whose data view fails answers with a chartShowServerError()
+        // call and defines no loadChartScript; caching the previous one here
+        // would replay the wrong chart on the next identical request
         const input = win.document.querySelector('[name="time_since"]');
         input.value = "2020-01-01";
-        win.nextResponse = "alert('Chart error: boom');";
+        win.nextResponse = "chartShowServerError('g1', 'Users chart', 'boom');";
         input.dispatchEvent(new win.Event("change", { bubbles: true }));
         await settle();
 
-        assert.deepEqual(win.alerts, ["Chart error: boom"]);
+        const note = win.document.querySelector("#chart_container_g1 .chart-load-error");
+        assert.ok(note.textContent.includes("Users chart: boom"));
+        assert.deepEqual(win.alerts, [], "an application error must not block the page");
         assert.equal(Object.keys(win.chart_scripts).length, 1);
     });
 
-    it("reports a failing request and stops the spinner", async () => {
+    it("reports a failing request inside the chart and offers a retry", async () => {
         const win = chartPage();
         win.nextStatus = 500;
         await settle();
 
-        assert.deepEqual(win.alerts, ["Error during chart loading."]);
+        assert.deepEqual(win.alerts, [], "a failed request must not block the page");
         assert.ok(!form(win).classList.contains("loading"));
+        const note = win.document.querySelector("#chart_container_g1 .chart-load-error");
+        assert.ok(note.textContent.includes("HTTP 500"));
+
+        // the retry re-runs the same form's request and paints the chart
+        win.nextStatus = undefined;
+        win.nextResponse = CHART_SCRIPT;
+        win.requests.length = 0;
+        note.querySelector(".chart-load-retry").click();
+        await settle();
+
+        assert.equal(win.requests.length, 1);
+        assert.equal(win.chartRuns, 1);
     });
 });
 
@@ -451,14 +465,15 @@ describe("chart html loading", () => {
         win.nextStatus = 503;
         win.nextResponse = BUSY_PAGE;
         let called = false;
-        let failed = false;
-        win.loadHtml(el, "/chart/", () => { called = true; }, () => { failed = true; });
+        let failure = null;
+        win.loadHtml(el, "/chart/", () => { called = true; }, (error) => { failure = error; });
         await settle();
 
         assert.equal(called, false);
-        assert.ok(failed, "the error callback must run");
+        assert.ok(failure, "the error callback must run");
+        assert.ok(failure.message.includes("HTTP 503"));
         assert.equal(el.querySelector("link"), null, "no foreign stylesheet in the page");
-        assert.ok(el.querySelector(".chart-load-error").textContent.includes("HTTP 503"));
+        assert.equal(el.innerHTML, "", "with an error callback the caller owns the rendering");
     });
 
     it("refuses a full document even on HTTP 200 (login page after session expiry)", async () => {
