@@ -154,8 +154,8 @@ class AdminToolsStatsAdminCharts(BaseSuperuserAuthenticatedClient):
         )
         self.assertContains(
             response,
-            '<div class="admin_charts admin_chanrts_dynamic notloaded" id="chart_element_user_graph" '
-            'data-chart-key="user_graph"></div>',
+            '<div class="admin_charts admin_charts_dynamic admin_chanrts_dynamic notloaded" '
+            'id="chart_element_user_graph" data-chart-key="user_graph"></div>',
             html=True,
         )
 
@@ -188,8 +188,8 @@ class AdminToolsStatsAdminCharts(BaseSuperuserAuthenticatedClient):
         response = self.client.get("/admin/")
         self.assertContains(
             response,
-            '<div class="admin_charts admin_chanrts_dynamic notloaded" id="chart_element_user_graph" '
-            'data-chart-key="user_graph"></div>',
+            '<div class="admin_charts admin_charts_dynamic admin_chanrts_dynamic notloaded" '
+            'id="chart_element_user_graph" data-chart-key="user_graph"></div>',
             html=True,
         )
 
@@ -218,8 +218,8 @@ class AdminToolsStatsAdminCharts(BaseSuperuserAuthenticatedClient):
         )
         self.assertContains(
             response,
-            '<div class="admin_charts admin_chanrts_dynamic notloaded" id="chart_element_user_graph" '
-            'data-chart-key="user_graph"></div>',
+            '<div class="admin_charts admin_charts_dynamic admin_chanrts_dynamic notloaded" '
+            'id="chart_element_user_graph" data-chart-key="user_graph"></div>',
             html=True,
         )
 
