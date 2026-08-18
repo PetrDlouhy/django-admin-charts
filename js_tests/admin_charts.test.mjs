@@ -309,6 +309,84 @@ describe("chart script handling", () => {
     });
 });
 
+describe("searchable filter select", () => {
+    function chipSelect(win) {
+        return win.document.querySelector(".chart-filter-removable select");
+    }
+    function grow(win, count) {
+        const select = chipSelect(win);
+        for (let i = 0; i < count; i++) {
+            const option = win.document.createElement("option");
+            option.value = "org" + i;
+            option.textContent = "Organization " + i;
+            select.appendChild(option);
+        }
+        return select;
+    }
+    function mousedown(win, el) {
+        el.dispatchEvent(new win.MouseEvent("mousedown", { bubbles: true, cancelable: true }));
+    }
+
+    it("keeps the native select while the options stay navigable", async () => {
+        const win = chartPage();
+        await settle();
+        mousedown(win, chipSelect(win));
+        assert.equal(win.document.querySelector(".chart-select-search"), null);
+    });
+
+    it("swaps a long select for a searchable panel", async () => {
+        const win = chartPage();
+        await settle();
+        const select = grow(win, 30);
+        mousedown(win, select);
+
+        const panel = win.document.querySelector(".chart-select-search");
+        assert.ok(panel, "search panel must open");
+        assert.ok(panel.querySelector("input[type=search]"));
+        assert.equal(
+            panel.querySelectorAll(".chart-select-search-option").length,
+            select.options.length
+        );
+    });
+
+    it("filters as you type and picking an option reloads the chart", async () => {
+        const win = chartPage();
+        await settle();
+        const select = grow(win, 30);
+        mousedown(win, select);
+        win.requests.length = 0;
+
+        const input = win.document.querySelector(".chart-select-search input");
+        input.value = "Organization 12";
+        input.dispatchEvent(new win.Event("input", { bubbles: true }));
+        const options = win.document.querySelectorAll(".chart-select-search-option");
+        assert.equal(options.length, 1);
+
+        options[0].click();
+        await settle();
+
+        assert.equal(select.value, "org12");
+        assert.equal(win.document.querySelector(".chart-select-search"), null);
+        assert.ok(
+            lastRequest(win).url.includes("select_box_dynamic_1=org12"),
+            lastRequest(win).url
+        );
+    });
+
+    it("closes on Escape without changing the value", async () => {
+        const win = chartPage();
+        await settle();
+        const select = grow(win, 30);
+        const before = select.value;
+        mousedown(win, select);
+        win.document.dispatchEvent(
+            new win.KeyboardEvent("keydown", { key: "Escape", bubbles: true })
+        );
+        assert.equal(win.document.querySelector(".chart-select-search"), null);
+        assert.equal(select.value, before);
+    });
+});
+
 describe("csv download", () => {
     it("is delegated to the link's own form", async () => {
         const win = chartPage();
