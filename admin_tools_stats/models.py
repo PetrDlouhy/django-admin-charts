@@ -25,7 +25,7 @@ from django.contrib.auth.models import AnonymousUser, User
 from django.core.cache import cache
 from django.core.exceptions import FieldError, ValidationError
 from django.core.validators import RegexValidator
-from django.db import models
+from django.db import DatabaseError, models
 from django.db.models import ExpressionWrapper, JSONField, Q
 from django.db.models.aggregates import Avg, Count, Max, Min, StdDev, Sum, Variance
 from django.db.models.fields import DateField, DateTimeField
@@ -1138,14 +1138,32 @@ class CriteriaToStatsM2M(models.Model):
         cached = cache.get(cache_key, missing)
         if cached is not missing:  # cache a None result too, like memoize did
             return cached
-        result = self._compute_dynamic_choices(
-            count_limit,
-            operation_choice,
-            operation_field_choice,
-            user,
-            queryset_filter,
-        )
+        stale_key = cache_key + ":stale"
+        try:
+            result = self._compute_dynamic_choices(
+                count_limit,
+                operation_choice,
+                operation_field_choice,
+                user,
+                queryset_filter,
+            )
+        except DatabaseError:
+            # the choices query over a big table can exceed the statement
+            # timeout once the cached copy expires; serving the last known
+            # choices keeps the whole chart form rendering, instead of one
+            # filter's choices failing the chart
+            stale = cache.get(stale_key, missing)
+            if stale is missing:
+                raise
+            logger.warning(
+                "Dynamic choices query for criteria %s failed; serving stale choices",
+                self.pk,
+                exc_info=True,
+            )
+            return stale
         cache.set(cache_key, result, self._DYN_CHOICES_TTL)
+        # a never-expiring last resort for exactly the failure above
+        cache.set(stale_key, result, None)
         return result
 
     def _compute_dynamic_choices(
