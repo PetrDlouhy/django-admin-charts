@@ -738,6 +738,31 @@ class AdminChartsFixtureTests(BaseSuperuserAuthenticatedClient):
             "js_tests/fixtures/chart_form.html is out of date - regenerate it from this response",
         )
 
+    def test_chart_form_renders_the_divide_control(self):
+        """The fixture chart has no multiple_series criteria, so the divide
+        control's template branch is only exercised here."""
+        stats = baker.make(
+            "DashboardStats",
+            graph_title="Divided chart",
+            date_field_name="date_joined",
+            model_name="User",
+            model_app_name="auth",
+            graph_key="g2",
+            allowed_type_operation_field_name=[],
+        )
+        criteria = baker.make(
+            "DashboardStatsCriteria",
+            criteria_name="active",
+            dynamic_criteria_field_name="is_active",
+        )
+        baker.make("CriteriaToStatsM2M", criteria=criteria, stats=stats, use_as="multiple_series")
+
+        response = self.client.get(
+            reverse("chart-analytics", kwargs={"graph_key": "g2"}) + "?analytics_chart=true"
+        )
+        self.assertContains(response, 'title="Divide into series by"')
+        self.assertContains(response, 'name="select_box_multiple_series"')
+
 
 class CSVDownloadSuperuserTests(BaseSuperuserAuthenticatedClient):
     def setUp(self):
