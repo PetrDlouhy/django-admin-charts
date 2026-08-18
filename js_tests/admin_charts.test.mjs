@@ -514,6 +514,24 @@ describe("lazy chart loading", () => {
         assert.deepEqual(unobserved, [el], "a loaded chart must not load twice");
     });
 
+    it("registers itself: a chart present at page load loads with no template glue", async () => {
+        // regression: the registration used to live in an inline template
+        // script that ran before admin_charts.js was loaded and crashed with
+        // "lazyLoadAdminCharts is not defined", so no chart ever loaded
+        const { loadFixture } = await import("./helpers.mjs");
+        const body = loadFixture("chart_form.html") +
+            '<div id="chart_element_g9" class="admin_charts admin_charts_dynamic notloaded"' +
+            ' data-chart-key="g9"></div>';
+        const win = chartPage({ body });
+        await settle();
+
+        const urls = win.requests.map((r) => r.url.split("?")[0]);
+        assert.ok(
+            urls.includes(URLS.analyticsChart + "g9"),
+            "the dashboard chart must load without any inline registration script: " + urls
+        );
+    });
+
     it("falls back to loading everything when IntersectionObserver is missing", async () => {
         const win = chartPage();
         await settle();
