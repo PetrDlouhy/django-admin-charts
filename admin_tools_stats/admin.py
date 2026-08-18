@@ -13,18 +13,13 @@ from django import forms
 from django.contrib import admin
 from django.urls import reverse
 from django.utils.html import format_html
-from django.utils.translation import gettext_lazy as _
 
-from admin_tools_stats.app_label_renamer import AppLabelRenamer
 from admin_tools_stats.models import (
     CachedValue,
     CriteriaToStatsM2M,
     DashboardStats,
     DashboardStatsCriteria,
 )
-
-
-AppLabelRenamer(native_app_label="admin_tools_stats", app_label=_("Admin Tools Stats")).main()
 
 
 @admin.register(DashboardStatsCriteria)

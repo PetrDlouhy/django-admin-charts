@@ -676,7 +676,7 @@ class DashboardStats(models.Model):
         user: Union[User, AnonymousUser],
     ):
         if time_since > time_until:
-            raise Exception("time_since is greater than time_until")
+            raise ValueError("time_since is greater than time_until")
         dynamic_criteria: Dict[str, Union[str, List[str]]] = configuration.copy()
         series: Dict[str, Dict[str, int]] = {}
         # Outside of get_time_series just for performance reasons
@@ -1081,7 +1081,7 @@ class CriteriaToStatsM2M(models.Model):
                         choices_queryset = choices_queryset.filter(**queryset_filter)
                     if user and not user.has_perm("admin_tools_stats.view_dashboardstats"):
                         if not self.stats.user_field_name:
-                            raise Exception(
+                            raise ValueError(
                                 "User field must be defined to enable charts for non-superusers"
                             )
                         choices_queryset = choices_queryset.filter(
