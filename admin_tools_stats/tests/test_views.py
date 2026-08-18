@@ -204,6 +204,7 @@ class ChartDataViewContextTests(BaseSuperuserAuthenticatedClient):
                 "Check if you are logged in and have permission "
                 "'admin_tools_stats | dashboard stats | Can view dashboard stats'",
                 "graph_title": "Users chart",
+                "graph_key": "user_graph",
                 "view": chart_data_view,
             },
         )

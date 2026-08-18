@@ -171,8 +171,9 @@ function loadChart(form, graph_key, reload, is_analytics){
          return response.text();
       })
       .then(function(source) {
-         // an errored chart answers with an alert() and defines no
-         // loadChartScript; caching the previous chart's one would replay it
+         // an errored chart answers with a chartShowServerError() call and
+         // defines no loadChartScript; caching the previous chart's one
+         // would replay it
          window.loadChartScript = undefined;
          runScript(source);
          form.classList.remove("loading");
@@ -185,18 +186,47 @@ function loadChart(form, graph_key, reload, is_analytics){
          if (error && error.name === 'AbortError') {
             return;  // superseded by a newer request, which owns the spinner now
          }
-         alert("Error during chart loading.");
          form.classList.remove("loading");
+         const container = document.getElementById("chart_container_" + graph_key);
+         if (container) {
+            chartLoadError(
+               container,
+               "The chart could not be loaded (" + error.message + ").",
+               {retryGraphKey: graph_key}
+            );
+         }
       });
 }
 
-function chartLoadError(element, message) {
+function chartLoadError(element, message, retryDataset) {
    const note = document.createElement('p');
    note.className = 'chart-load-error';
    note.style.cssText = 'color: var(--body-quiet-color, #666); font-size: 13px; margin: 0; padding: 12px 10px;';
-   note.textContent = message;
+   note.textContent = message + ' ';
+   if (retryDataset) {
+      const retry = document.createElement('button');
+      retry.type = 'button';
+      retry.className = 'chart-load-retry';
+      retry.textContent = 'Retry';
+      retry.style.cssText = 'font: inherit; font-size: 12px; color: var(--secondary, #417690);' +
+         ' background: none; border: 1px solid var(--border-color, #ccc); border-radius: 4px;' +
+         ' padding: 2px 10px; margin-left: 6px; cursor: pointer;';
+      Object.keys(retryDataset).forEach(function(key) {
+         retry.dataset[key] = retryDataset[key];
+      });
+      note.appendChild(retry);
+   }
    element.innerHTML = '';
    element.appendChild(note);
+}
+
+// the chart data view answers an application error with a call to this
+// instead of chart javascript, so the failure stays inside the chart
+function chartShowServerError(graph_key, graph_title, message) {
+   const container = document.getElementById('chart_container_' + graph_key);
+   if (container) {
+      chartLoadError(container, graph_title + ': ' + message);
+   }
 }
 
 function loadHtml(element, url, callback, onError) {
@@ -219,12 +249,13 @@ function loadHtml(element, url, callback, onError) {
          callback();
       })
       .catch(function(error) {
-         chartLoadError(
-            element,
-            "The chart could not be loaded (" + error.message + "). Reload the page to try again."
-         );
          if (onError) {
-            onError();
+            onError(error);
+         } else {
+            chartLoadError(
+               element,
+               "The chart could not be loaded (" + error.message + "). Reload the page to try again."
+            );
          }
       });
 }
@@ -477,8 +508,13 @@ function loadAnalyticsChart(chart_key){
 
          loadChartForms(chartElement, chart_key);
          document.body.classList.remove("loading");
-      }, function(){
-         // the element keeps .notloaded, so showing the chart again retries
+      }, function(error){
+         // the element keeps .notloaded, so retrying just loads it again
+         chartLoadError(
+            chartElement,
+            "The chart could not be loaded (" + error.message + ").",
+            {retryAnalyticsKey: chart_key}
+         );
          document.body.classList.remove("loading");
       });
    } else {
@@ -569,6 +605,13 @@ function loadAdminChart(chart_key){
 
          loadChartForms(chartElement, chart_key);
          watchChartWidth(chartElement);
+      }, function(error){
+         // the element keeps .notloaded, so retrying just loads it again
+         chartLoadError(
+            chartElement,
+            "The chart could not be loaded (" + error.message + ").",
+            {retryChartKey: chart_key}
+         );
       });
    }
    chartElement.style.display = '';
@@ -626,6 +669,23 @@ defer( function(){
          const csvLink = event.target.closest('.download-csv');
          if (csvLink) {
             downloadCSV(event, csvLink);
+            return;
+         }
+         const retryButton = event.target.closest('.chart-load-retry');
+         if (retryButton) {
+            if (retryButton.dataset.retryGraphKey) {
+               const form = visibleForms(document).find(function(candidate) {
+                  const input = candidate.querySelector('.hidden_graph_key');
+                  return input && input.value === retryButton.dataset.retryGraphKey;
+               });
+               if (form) {
+                  loadAnchor(form);
+               }
+            } else if (retryButton.dataset.retryAnalyticsKey) {
+               loadAnalyticsChart(retryButton.dataset.retryAnalyticsKey);
+            } else if (retryButton.dataset.retryChartKey) {
+               loadAdminChart(retryButton.dataset.retryChartKey);
+            }
             return;
          }
          const removeButton = event.target.closest('.chart-filter-remove-btn');

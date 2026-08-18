@@ -4,7 +4,7 @@
 <html><body><pre>
 {% endif %}
 {% if error %}
-alert('{{ graph_title }} error: \n{{ error|escapejs }}');
+chartShowServerError('{{ graph_key|escapejs }}', '{{ graph_title|escapejs }}', '{{ error|escapejs }}');
 {% elif values %}
 function loadChartScript(){
    d3.selectAll('.nvtooltip').remove();
