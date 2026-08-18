@@ -175,14 +175,42 @@ function loadChart(form, graph_key, reload, is_analytics){
       });
 }
 
-function loadHtml(element, url, callback) {
+function chartLoadError(element, message) {
+   const note = document.createElement('p');
+   note.className = 'chart-load-error';
+   note.style.cssText = 'color: var(--body-quiet-color, #666); font-size: 13px; margin: 0; padding: 12px 10px;';
+   note.textContent = message;
+   element.innerHTML = '';
+   element.appendChild(note);
+}
+
+function loadHtml(element, url, callback, onError) {
    fetch(url, {credentials: "same-origin"})
       .then(function(response) {
+         if (!response.ok) {
+            throw new Error("HTTP " + response.status);
+         }
          return response.text();
       })
       .then(function(html) {
+         // an overload page, a proxy error or a login redirect answers with a
+         // complete document; injected via innerHTML its stylesheets would
+         // load and restyle the whole admin page. The chart endpoints only
+         // ever answer with a fragment.
+         if (/^\s*(<!doctype|<html)[\s>]/i.test(html)) {
+            throw new Error("got a full page instead of the chart");
+         }
          element.innerHTML = html;
          callback();
+      })
+      .catch(function(error) {
+         chartLoadError(
+            element,
+            "The chart could not be loaded (" + error.message + "). Reload the page to try again."
+         );
+         if (onError) {
+            onError();
+         }
       });
 }
 
@@ -433,6 +461,9 @@ function loadAnalyticsChart(chart_key){
          chartElement.style.display = '';
 
          loadChartForms(chartElement, chart_key);
+         document.body.classList.remove("loading");
+      }, function(){
+         // the element keeps .notloaded, so showing the chart again retries
          document.body.classList.remove("loading");
       });
    } else {

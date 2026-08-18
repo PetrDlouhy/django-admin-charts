@@ -387,6 +387,92 @@ describe("searchable filter select", () => {
     });
 });
 
+describe("chart html loading", () => {
+    // what BlenderKit's "site is busy" page looks like to the fetch: a full
+    // document carrying its own stylesheets
+    const BUSY_PAGE =
+        '<!DOCTYPE html><html><head><link rel="stylesheet" href="/static/homepage.css">' +
+        "</head><body>Site is busy</body></html>";
+
+    function targetElement(win) {
+        const el = win.document.createElement("div");
+        win.document.body.appendChild(el);
+        return el;
+    }
+
+    it("injects a fragment and runs the callback", async () => {
+        const win = chartPage();
+        await settle();
+        const el = targetElement(win);
+        win.nextResponse = '<form class="stateform">fragment</form>';
+        let called = false;
+        win.loadHtml(el, "/chart/", () => { called = true; });
+        await settle();
+
+        assert.ok(called);
+        assert.ok(el.innerHTML.includes("stateform"));
+    });
+
+    it("refuses an error page: its stylesheets must not enter the admin (HTTP 503)", async () => {
+        const win = chartPage();
+        await settle();
+        const el = targetElement(win);
+        win.nextStatus = 503;
+        win.nextResponse = BUSY_PAGE;
+        let called = false;
+        let failed = false;
+        win.loadHtml(el, "/chart/", () => { called = true; }, () => { failed = true; });
+        await settle();
+
+        assert.equal(called, false);
+        assert.ok(failed, "the error callback must run");
+        assert.equal(el.querySelector("link"), null, "no foreign stylesheet in the page");
+        assert.ok(el.querySelector(".chart-load-error").textContent.includes("HTTP 503"));
+    });
+
+    it("refuses a full document even on HTTP 200 (login page after session expiry)", async () => {
+        const win = chartPage();
+        await settle();
+        const el = targetElement(win);
+        win.nextResponse = BUSY_PAGE;
+        win.loadHtml(el, "/chart/", () => { throw new Error("must not run"); });
+        await settle();
+
+        assert.ok(el.querySelector(".chart-load-error"));
+        assert.equal(el.querySelector("link"), null);
+    });
+
+    it("reports a network failure instead of staying silent", async () => {
+        const win = chartPage();
+        await settle();
+        const el = targetElement(win);
+        win.fetch = () => Promise.reject(new Error("connection lost"));
+        win.loadHtml(el, "/chart/", () => { throw new Error("must not run"); });
+        await settle();
+
+        assert.ok(el.querySelector(".chart-load-error").textContent.includes("connection lost"));
+    });
+
+    it("clears the page loading state when an analytics chart fails to load", async () => {
+        const win = chartPage();
+        await settle();
+        const chartEl = win.document.createElement("div");
+        chartEl.id = "chart_element_g2";
+        chartEl.className = "admin_charts notloaded";
+        win.document.body.appendChild(chartEl);
+        win.nextStatus = 503;
+        win.nextResponse = BUSY_PAGE;
+
+        win.loadAnalyticsChart("g2");
+        await settle();
+
+        assert.ok(!win.document.body.classList.contains("loading"),
+            "a failed load must not leave the page frozen behind pointer-events:none");
+        assert.ok(chartEl.querySelector(".chart-load-error"));
+        assert.ok(chartEl.classList.contains("notloaded"), "kept for retry on next show");
+    });
+});
+
 describe("csv download", () => {
     it("is delegated to the link's own form", async () => {
         const win = chartPage();
