@@ -130,7 +130,6 @@ STATICFILES_FINDERS = (
     "django.contrib.staticfiles.finders.FileSystemFinder",
     "django.contrib.staticfiles.finders.AppDirectoriesFinder",
     # 'django.contrib.staticfiles.finders.DefaultStorageFinder',
-    "djangobower.finders.BowerFinder",
 )
 
 # Make this unique, and don't share it with anybody.
@@ -200,7 +199,6 @@ INSTALLED_APPS = [
     "django.contrib.sites",
     "django.contrib.messages",
     "django.contrib.staticfiles",
-    "djangobower",
     "demoproject",
     # 'south',
 ]
@@ -242,19 +240,6 @@ LOGGING = {
     },
 }
 
-
-# Django-bower
-# ------------
-
-# Specifie path to components root (you need to use absolute path)
-BOWER_COMPONENTS_ROOT = os.path.join(PROJECT_ROOT, "components")
-
-BOWER_PATH = "/usr/local/bin/bower"
-
-BOWER_INSTALLED_APPS = (
-    "d3#3.3.13",
-    "nvd3#1.7.1",
-)
 
 # DJANGO-ADMIN-TOOL
 # =================
