@@ -712,10 +712,10 @@ class DashboardStats(models.Model):
         for key, choice in choices.items():
             if key == "":
                 continue
-            if isinstance(choice, (list, tuple)):
-                db_value, label = choice
-            else:
-                db_value, label = key, choice
+            # every choice a plain dynamic field produces is a
+            # (database value, label) pair; the custom-mapping shapes that
+            # are not never qualify for this path
+            db_value, label = choice
             if isinstance(db_value, list):
                 # the count_limit "other" bucket carries every remaining value
                 for value in db_value:
