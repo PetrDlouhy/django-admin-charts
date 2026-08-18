@@ -618,6 +618,7 @@ class DashboardStats(models.Model):
         operation_choice: Optional[str],
         operation_field_choice: Optional[str],
         interval: Interval,
+        group_by_field: Optional[str] = None,
     ):
         """Get the stats time series"""
         if not user.has_perm("admin_tools_stats.view_dashboardstats") and self.user_field_name:
@@ -629,7 +630,12 @@ class DashboardStats(models.Model):
             aggregate_series = [None]
 
         operations = self.get_operations_list()
-        if operations and len(operations) > 1 and operation_choice == "":
+        if group_by_field:
+            # one GROUP BY (date, choice) query instead of one filtered
+            # aggregate per choice - the aggregate count stays constant no
+            # matter how many choices the divide criteria has
+            aggregate_dict["agg"] = self.get_operation(operation_choice, operation_field_choice)
+        elif operations and len(operations) > 1 and operation_choice == "":
             for operation in operations:
                 i += 1
                 aggregate_dict["agg_%i" % i] = self.get_operation(operation_choice, operation)
@@ -650,7 +656,10 @@ class DashboardStats(models.Model):
         else:
             tzinfo_kwargs = {}
         qs = qs.annotate(d=Trunc(self.date_field_name, interval.val(), **tzinfo_kwargs))  # type: ignore
-        qs = qs.values_list("d")
+        if group_by_field:
+            qs = qs.values_list("d", group_by_field)
+        else:
+            qs = qs.values_list("d")
         qs = qs.order_by("d")
         qs = qs.annotate(**aggregate_dict)
         return qs
@@ -664,6 +673,88 @@ class DashboardStats(models.Model):
         except (DashboardStatsCriteria.DoesNotExist, ValueError):
             criteria = None
         return criteria
+
+    def _group_by_divide_field(self, m2m, operations, operation_choice) -> Optional[str]:
+        """The divide field when one GROUP BY query can compute all series.
+
+        A choice of a plain dynamic field equals one raw column value, so the
+        whole chart is one GROUP BY (date, field) query. Custom mappings and
+        __isnull criteria describe arbitrary Q filters and keep the
+        one-filtered-aggregate-per-choice path; so does the several-operations
+        mode, whose series are not choices at all.
+        """
+        if not m2m or not m2m.criteria.dynamic_criteria_field_name:
+            return None
+        if m2m.criteria.criteria_dynamic_mapping:
+            return None
+        field_name = m2m.get_dynamic_criteria_field_name()
+        if not field_name or field_name.endswith("__isnull"):
+            return None
+        if len(operations) > 1 and operation_choice == "":
+            return None
+        return field_name
+
+    def _get_multi_time_series_grouped(
+        self,
+        group_by_field: str,
+        choices,
+        names,
+        choices_filters,
+        time_since: datetime.datetime,
+        time_until: datetime.datetime,
+        interval: Interval,
+        operation_choice: Optional[str],
+        operation_field_choice: Optional[str],
+        user: Union[User, AnonymousUser],
+    ):
+        """Pivot one GROUP BY (date, choice) query into the series dict."""
+        label_by_value: Dict = {}
+        for key, choice in choices.items():
+            if key == "":
+                continue
+            if isinstance(choice, (list, tuple)):
+                db_value, label = choice
+            else:
+                db_value, label = key, choice
+            if isinstance(db_value, list):
+                # the count_limit "other" bucket carries every remaining value
+                for value in db_value:
+                    label_by_value[value] = label
+            else:
+                label_by_value[db_value] = label
+
+        series: Dict = {}
+        rows = self.get_time_series(
+            choices_filters,
+            [],
+            user,
+            time_since,
+            time_until,
+            operation_choice,
+            operation_field_choice,
+            interval,
+            group_by_field=group_by_field,
+        )
+        for time, raw_value, value in rows:
+            bucket = series.setdefault(time, {})
+            if raw_value not in label_by_value:
+                continue  # same as the aggregate path: unlisted values count nowhere
+            label = label_by_value[raw_value]
+            # += merges the many raw values of the "other" bucket into one serie
+            bucket[label] = (bucket.get(label) or 0) + (value or 0)
+
+        # the aggregate path yields, on a date that has rows, the aggregate of
+        # an empty set for every serie without a match: 0 for Count, NULL for
+        # everything else. Reproduce that, and give the buckets a stable order
+        # so the legend follows the choices.
+        effective_operation = operation_choice or self.type_operation_field_name or "Count"
+        empty_value = 0 if effective_operation == "Count" else None
+        for time in series:
+            bucket = series[time]
+            series[time] = {name: bucket.get(name, empty_value) for name in names}
+
+        self._fill_missing_dates(series, names, time_since, time_until, interval)
+        return series
 
     def get_multi_time_series(
         self,
@@ -698,6 +789,7 @@ class DashboardStats(models.Model):
             operation_field_choice,
             user,
         )
+        choices = None
         if m2m and m2m.criteria.dynamic_criteria_field_name:
             choices = m2m.get_dynamic_choices(
                 operation_choice,
@@ -715,6 +807,21 @@ class DashboardStats(models.Model):
             names = operations
         else:
             names = [""]
+
+        group_by_field = self._group_by_divide_field(m2m, operations, operation_choice)
+        if group_by_field and choices:
+            return self._get_multi_time_series_grouped(
+                group_by_field,
+                choices,
+                names,
+                choices_filters,
+                time_since,
+                time_until,
+                interval,
+                operation_choice,
+                operation_field_choice,
+                user,
+            )
 
         # Now we get filters only for multiseries divide
         queryset_filters, aggregate_series = self.get_series_query_parameters(
@@ -747,7 +854,11 @@ class DashboardStats(models.Model):
                 i += 1
                 series[time][name] = tv[i]
 
-        # fill with zeros where the records are missing
+        self._fill_missing_dates(series, names, time_since, time_until, interval)
+        return series
+
+    def _fill_missing_dates(self, series, names, time_since, time_until, interval: Interval):
+        """Fill with zeros where the records are missing"""
         start = truncate(time_since, interval.val())
         end = time_until
         tz = get_charts_timezone()
@@ -755,20 +866,20 @@ class DashboardStats(models.Model):
             start = start.replace(tzinfo=None)
             end = end.replace(tzinfo=None)
         dates: List[datetime.datetime] = rrule_list(interval, start, end)
-        for time in dates:
+        for date_point in dates:
+            time: Union[datetime.date, datetime.datetime] = date_point
             if self.get_date_field().__class__ == DateField:
-                time = time.date()
+                time = date_point.date()
             elif settings.USE_TZ:
                 if hasattr(tz, "zone"):  # pytz conversion
-                    time = tz.localize(time)
+                    time = tz.localize(date_point)
                 else:
-                    time = time.astimezone(tz)
+                    time = date_point.astimezone(tz)
             if time not in series:
                 series[time] = {}
             for key in names:
                 if key not in series[time]:
                     series[time][key] = 0
-        return series
 
     def get_gaps(
         self,
