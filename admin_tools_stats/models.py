@@ -51,6 +51,11 @@ def get_charts_timezone():
     return None
 
 
+def has_full_chart_access(user: Union[User, AnonymousUser]) -> bool:
+    """Chart staff: every chart, everyone's rows, error details, cache reloads."""
+    return user.has_perm("admin_tools_stats.view_dashboardstats")
+
+
 logger = logging.getLogger(__name__)
 
 operation = (
@@ -509,6 +514,10 @@ class DashboardStats(models.Model):
             return super().clean(*args, **kwargs)
         raise ValidationError(errors)
 
+    def is_limited_to_user(self, user: Union[User, AnonymousUser]) -> bool:
+        """Whether the chart aggregates only the rows of ``user`` (``user_field_name``)."""
+        return bool(self.user_field_name) and not has_full_chart_access(user)
+
     def get_operations_list(self):
         if self.operation_field_name:
             return self.operation_field_name.replace(" ", "").split(",")
@@ -621,7 +630,7 @@ class DashboardStats(models.Model):
         group_by_field: Optional[str] = None,
     ):
         """Get the stats time series"""
-        if not user.has_perm("admin_tools_stats.view_dashboardstats") and self.user_field_name:
+        if self.is_limited_to_user(user):
             queryset_filters[self.user_field_name] = user
 
         aggregate_dict = {}
@@ -923,6 +932,18 @@ class DashboardStats(models.Model):
         operation_field_choice: Optional[str],
         user: Union[User, AnonymousUser],
     ):
+        if self.is_limited_to_user(user):
+            # CachedValue rows carry no user, so one viewer's rows must neither
+            # be served from the shared cache nor be written into it
+            return self.get_multi_time_series(
+                configuration,
+                time_since,
+                time_until,
+                interval,
+                operation_choice,
+                operation_field_choice,
+                user,
+            )
         configuration = configuration.copy()
         m2m = self.get_multi_series_criteria(configuration)
         reload_data = configuration.pop("reload", None) in ("true", "True")
