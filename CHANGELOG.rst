@@ -49,6 +49,8 @@ Fixes
   must be one of the chart's allowed operations or its default operation, like
   ``select_box_operation_field`` since the fix above. A URL that asked a chart
   for another aggregate is now refused
+* **an unknown divide criteria draws the undivided chart**, like a non-numeric
+  one already did; it raised the wrong exception class and failed the request
 
 
 1.8.0 (2026-08-18)

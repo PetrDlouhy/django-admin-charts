@@ -686,7 +686,7 @@ class DashboardStats(models.Model):
         try:
             m2m_id = int(str(request_get.get("select_box_multiple_series", "")))
             criteria = self.criteriatostatsm2m_set.get(use_as="multiple_series", pk=m2m_id)
-        except (DashboardStatsCriteria.DoesNotExist, ValueError):
+        except (CriteriaToStatsM2M.DoesNotExist, ValueError):
             criteria = None
         return criteria
 

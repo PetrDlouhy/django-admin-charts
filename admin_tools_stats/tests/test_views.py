@@ -1475,3 +1475,13 @@ class BadChartRequestTests(BaseSuperuserAuthenticatedClient):
                 self.assertEqual(
                     self.get("chart-csv", select_box_operation=operation).status_code, 200
                 )
+
+    @override_settings(USE_TZ=True, TIME_ZONE="UTC")
+    def test_an_unknown_divide_criteria_draws_the_undivided_chart(self):
+        """Like a non-numeric one: the divide of another chart is no divide here."""
+        other_charts_divide = baker.make("CriteriaToStatsM2M", use_as="multiple_series")
+        response = self.get("chart-csv", select_box_multiple_series=other_charts_divide.pk)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            response.content.decode().split("\r\n")[2:4], ["Date,", "2010-10-10 00:00:00,1"]
+        )
