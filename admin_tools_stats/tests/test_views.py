@@ -1407,3 +1407,31 @@ class EscapeCSVFormulaTests(SimpleTestCase):
         for cell in ("Count", "", "2010-10-10 00:00:00", " =1", -5, 1.5, None):
             with self.subTest(cell):
                 self.assertEqual(escape_csv_formula(cell), cell)
+
+
+class BadChartRequestTests(BaseSuperuserAuthenticatedClient):
+    """A request for an unknown chart, or with a malformed parameter, gets a 4xx, not a 500."""
+
+    def setUp(self):
+        super().setUp()
+        baker.make(
+            "DashboardStats",
+            date_field_name="date_joined",
+            model_name="User",
+            model_app_name="auth",
+            graph_key="user_graph",
+            operation_field_name="id",
+            type_operation_field_name="Count",
+            allowed_type_operation_field_name=["Count", "Sum"],
+        )
+        baker.make("User", date_joined=datetime(2010, 10, 10, 12, tzinfo=timezone.utc))
+
+    def test_an_unknown_chart_is_404(self):
+        for url in (
+            reverse("chart-data", kwargs={"graph_key": "no_such_chart"}),
+            reverse("chart-data"),
+            reverse("chart-csv", kwargs={"graph_key": "no_such_chart"}),
+            reverse("chart-analytics", kwargs={"graph_key": "no_such_chart"}),
+        ):
+            with self.subTest(url):
+                self.assertEqual(self.client.get(url).status_code, 404)

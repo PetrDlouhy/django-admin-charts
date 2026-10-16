@@ -37,6 +37,12 @@ Security
   whoever opened the CSV. A string cell starting with ``=``, ``+``, ``-``, ``@``,
   tab or carriage return now gets a leading ``'``; numbers are unchanged
 
+Fixes
+~~~~~
+
+* **an unknown chart is a 404, not a 500**, in the chart data, CSV and analytics
+  chart views
+
 
 1.8.0 (2026-08-18)
 ------------------
