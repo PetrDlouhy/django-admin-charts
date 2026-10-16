@@ -4,7 +4,18 @@ Changelog
 1.8.1 (unreleased)
 ------------------
 
-* Nothing changed yet.
+Security
+~~~~~~~~
+
+* **a chart no longer aggregates an arbitrary field named in the URL**: the chart
+  data and CSV views took ``select_box_operation_field`` from the query string
+  and aggregated over it unchecked, so any viewer of a ``show_to_users`` chart -
+  a non-staff user included - could request e.g.
+  ``select_box_operation=Max&select_box_operation_field=<related>__email`` and
+  read values out of the rows the chart only means to count. The views now accept
+  only the chart's configured operation field(s), or the empty "divide all"
+  choice, and reject anything else - the JSON/HTML view with its normal in-chart
+  error, the CSV view with a ``400``
 
 
 1.8.0 (2026-08-18)
