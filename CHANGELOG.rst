@@ -23,6 +23,9 @@ Security
   unfiltered totals. Such viewers now always get their values calculated live,
   and never write them into the shared cache. A cache that a viewer may already
   have filled stays wrong until staff press "reload all" on the chart
+* **only chart staff (``view_dashboardstats``) can force a cache reload**: any
+  viewer could recalculate (and overwrite) a cached chart with ``reload`` or
+  ``reload_all``; other viewers' reload parameters are ignored
 
 
 1.8.0 (2026-08-18)
