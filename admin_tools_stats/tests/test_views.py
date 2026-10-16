@@ -1242,3 +1242,48 @@ class CachedChartViewerIsolationTests(BaseSuperuserAuthenticatedClient):
         self.assertEqual(self.day_value("admin", "&reload_all=true"), 3)
         self.assertEqual(self.day_value("user_1"), 1)
         self.assertEqual(self.day_value("admin"), 3)
+
+
+class CacheReloadPermissionTests(BaseUserAuthenticatedClient):
+    """Only chart staff can make a cached chart recalculate.
+
+    The cache is shared by every viewer and a recalculation runs the chart's
+    full query; any viewer of a ``show_to_users`` chart could force both.
+    """
+
+    def setUp(self):
+        super().setUp()
+        stats = baker.make(
+            "DashboardStats",
+            date_field_name="date_joined",
+            model_name="User",
+            model_app_name="auth",
+            graph_key="user_graph",
+            user_field_name=None,
+            show_to_users=True,
+            cache_values=True,
+        )
+        baker.make(
+            "CachedValue",
+            stats=stats,
+            time_scale="days",
+            operation=None,
+            dynamic_choices=[],
+            filtered_value="",
+            date=datetime(2010, 10, 10, tzinfo=timezone.utc),
+            value=7,
+            is_final=False,
+        )
+        baker.make("User", date_joined=datetime(2010, 10, 10, 12, tzinfo=timezone.utc))
+
+    @override_settings(USE_TZ=True, TIME_ZONE="UTC")
+    def test_a_viewer_gets_the_cached_values_despite_a_reload(self):
+        for reload in ("&reload=true", "&reload_all=true"):
+            with self.subTest(reload):
+                self.assertEqual(csv_day_value(self, "user_graph", reload), 7)
+        self.assertEqual(CachedValue.objects.get().value, 7)
+
+    @override_settings(USE_TZ=True, TIME_ZONE="UTC")
+    def test_chart_staff_can_reload(self):
+        self.user.user_permissions.add(Permission.objects.get(codename="view_dashboardstats"))
+        self.assertEqual(csv_day_value(self, "user_graph", "&reload_all=true"), 1)

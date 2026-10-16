@@ -12,7 +12,13 @@ from django.contrib.auth.models import AnonymousUser, User
 from django.http import HttpRequest, HttpResponse
 from django.views.generic import TemplateView, View
 
-from .models import DashboardStats, Interval, get_charts_timezone, truncate_ceiling
+from .models import (
+    DashboardStats,
+    Interval,
+    get_charts_timezone,
+    has_full_chart_access,
+    truncate_ceiling,
+)
 
 
 logger = logging.getLogger(__name__)
@@ -111,6 +117,9 @@ class ChartDataMixin:
             item: request.GET[item] for item in request.GET
         }
         remove_multiple_keys(configuration, ["csrfmiddlewaretoken", "_", "graph_key"])
+        if not has_full_chart_access(request.user):
+            # the cache is shared and a recalculation runs the full chart query
+            remove_multiple_keys(configuration, ["reload", "reload_all"])
 
         selected_interval: Interval = Interval(
             configuration.pop("select_box_interval", interval) or dashboard_stats.default_time_scale
