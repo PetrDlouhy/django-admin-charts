@@ -8,18 +8,20 @@
 # The Initial Developer of the Original Code is
 # Arezqui Belaid <info@star2billing.com>
 #
+import csv
+import io
 import re
 from datetime import datetime, timezone
 from decimal import Decimal
 from pathlib import Path
 
-from django.contrib.auth.models import Permission
+from django.contrib.auth.models import Permission, User
 from django.test import RequestFactory
 from django.test.utils import override_settings
 from django.urls import reverse
 from model_bakery import baker
 
-from admin_tools_stats.models import DashboardStats
+from admin_tools_stats.models import CachedValue, DashboardStats
 from admin_tools_stats.views import AnalyticsView, ChartDataView, Interval
 
 from .utils import (
@@ -1177,3 +1179,66 @@ class OperationFieldGuardTests(BaseUserAuthenticatedClient):
         response = self.client.get(self._url("chart-csv", "Count", ""))
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response["Content-Type"], "text/csv")
+
+
+def csv_rows(response):
+    return list(csv.reader(io.StringIO(response.content.decode("utf-8"))))
+
+
+def csv_day_value(test, graph_key, extra=""):
+    """The single value of a one-day, one-serie chart, read from its CSV."""
+    url = reverse("chart-csv", kwargs={"graph_key": graph_key}) + (
+        "?time_since=2010-10-10&time_until=2010-10-10&select_box_interval=days"
+        "&select_box_chart_type=discreteBarChart" + extra
+    )
+    response = test.client.get(url)
+    test.assertEqual(response.status_code, 200)
+    date, value = csv_rows(response)[3]
+    test.assertEqual(date, "2010-10-10 00:00:00")
+    return float(value)
+
+
+class CachedChartViewerIsolationTests(BaseSuperuserAuthenticatedClient):
+    """A cached chart limited to the viewer's own rows never shares them.
+
+    ``user_field_name`` limits the aggregated rows to the viewer unless they
+    have ``view_dashboardstats``, but ``CachedValue`` rows carry no user: whoever
+    filled the cache decided what every later viewer was served.
+    """
+
+    def setUp(self):
+        super().setUp()
+        baker.make(
+            "DashboardStats",
+            date_field_name="appointment",
+            model_name="TestKid",
+            model_app_name="demoproject",
+            graph_key="kid_graph",
+            user_field_name="author",
+            show_to_users=True,
+            cache_values=True,
+        )
+        appointment = datetime(2010, 10, 10, 12, tzinfo=timezone.utc)
+        baker.make("TestKid", appointment=appointment, author=User.objects.get(username="user_1"))
+        baker.make(
+            "TestKid",
+            appointment=appointment,
+            author=User.objects.get(username="user_2"),
+            _quantity=2,
+        )
+
+    def day_value(self, username, extra=""):
+        self.client.force_login(User.objects.get(username=username))
+        return csv_day_value(self, "kid_graph", extra)
+
+    @override_settings(USE_TZ=True, TIME_ZONE="UTC")
+    def test_a_viewers_values_are_not_served_to_another_viewer(self):
+        self.assertEqual(self.day_value("user_1", "&reload_all=true"), 1)
+        self.assertEqual(self.day_value("user_2"), 2)
+        self.assertFalse(CachedValue.objects.exists())
+
+    @override_settings(USE_TZ=True, TIME_ZONE="UTC")
+    def test_the_staff_cache_is_not_served_to_a_limited_viewer(self):
+        self.assertEqual(self.day_value("admin", "&reload_all=true"), 3)
+        self.assertEqual(self.day_value("user_1"), 1)
+        self.assertEqual(self.day_value("admin"), 3)

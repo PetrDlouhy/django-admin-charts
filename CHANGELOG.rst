@@ -16,6 +16,13 @@ Security
   only the chart's configured operation field(s), or the empty "divide all"
   choice, and reject anything else - the JSON/HTML view with its normal in-chart
   error, the CSV view with a ``400``
+* **a cached chart no longer serves one viewer's rows to another**: a chart with
+  both ``cache_values`` and ``user_field_name`` stored its values without the
+  user they were filtered for, so a viewer without ``view_dashboardstats`` got
+  whatever the last reload stored - another viewer's numbers, or the staff's
+  unfiltered totals. Such viewers now always get their values calculated live,
+  and never write them into the shared cache. A cache that a viewer may already
+  have filled stays wrong until staff press "reload all" on the chart
 
 
 1.8.0 (2026-08-18)
