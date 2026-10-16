@@ -10,6 +10,7 @@ from datetime_truncate import truncate
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.models import AnonymousUser, User
 from django.http import HttpRequest, HttpResponse
+from django.shortcuts import get_object_or_404
 from django.views.generic import TemplateView, View
 
 from .models import (
@@ -197,7 +198,7 @@ class ChartDataView(ChartDataMixin, TemplateView):
     def get_context_data(
         self, *args, interval: Optional[Interval] = None, graph_key=None, **kwargs
     ):
-        dashboard_stats = DashboardStats.objects.get(graph_key=graph_key)
+        dashboard_stats = get_object_or_404(DashboardStats, graph_key=graph_key)
         context = super().get_context_data(*args, **kwargs)
 
         if not self.check_chart_permission(dashboard_stats, self.request.user):
@@ -288,7 +289,7 @@ class ChartDataView(ChartDataMixin, TemplateView):
 
 class ChartDataCSVView(ChartDataMixin, View):
     def get(self, request, graph_key=None):
-        dashboard_stats = DashboardStats.objects.get(graph_key=graph_key)
+        dashboard_stats = get_object_or_404(DashboardStats, graph_key=graph_key)
 
         if not self.check_chart_permission(dashboard_stats, request.user):
             return HttpResponse("Permission denied", status=403)
@@ -400,5 +401,5 @@ class AnalyticsChartView(LoginRequiredMixin, ChartsMixin, TemplateView):
 
     def get_context_data(self, *args, graph_key=None, **kwargs):
         context_data = super().get_context_data(*args, **kwargs)
-        context_data["chart"] = self.get_charts_query().get(graph_key=graph_key)
+        context_data["chart"] = get_object_or_404(self.get_charts_query(), graph_key=graph_key)
         return context_data
