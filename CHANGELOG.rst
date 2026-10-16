@@ -1,7 +1,7 @@
 Changelog
 =========
 
-1.8.1 (unreleased)
+1.9.0 (2026-10-16)
 ------------------
 
 Security
@@ -51,6 +51,11 @@ Fixes
   for another aggregate is now refused
 * **an unknown divide criteria draws the undivided chart**, like a non-numeric
   one already did; it raised the wrong exception class and failed the request
+
+Compatibility
+~~~~~~~~~~~~~
+
+* tested on Django 6.1, and Django 5.2 on Python 3.14
 
 
 1.8.0 (2026-08-18)
