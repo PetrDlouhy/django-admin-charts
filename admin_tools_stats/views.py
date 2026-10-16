@@ -23,6 +23,8 @@ from .models import (
 
 logger = logging.getLogger(__name__)
 
+GENERIC_CHART_ERROR = "This chart could not be calculated. The error has been logged."
+
 
 class InvalidChartParameter(ValueError):
     """A chart-data request named a field the chart is not configured to expose.
@@ -196,12 +198,18 @@ class ChartDataView(ChartDataMixin, TemplateView):
         try:
             chart_data = self.get_chart_series_data(self.request, dashboard_stats, interval)
         except Exception as e:
-            if "debug" in self.request.GET:
+            show_details = has_full_chart_access(self.request.user)
+            if show_details and "debug" in self.request.GET:
                 raise
-            context["error"] = str(e)
+            logger.exception(e)
+            # the exception text can carry the schema or SQL; an invalid
+            # parameter only echoes the viewer's own request
+            if show_details or isinstance(e, InvalidChartParameter):
+                context["error"] = str(e)
+            else:
+                context["error"] = GENERIC_CHART_ERROR
             context["graph_title"] = dashboard_stats.graph_title
             context["graph_key"] = graph_key
-            logger.exception(e)
             return context
 
         series = chart_data["series"]

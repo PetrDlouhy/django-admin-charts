@@ -26,6 +26,10 @@ Security
 * **only chart staff (``view_dashboardstats``) can force a cache reload**: any
   viewer could recalculate (and overwrite) a cached chart with ``reload`` or
   ``reload_all``; other viewers' reload parameters are ignored
+* **chart error details are shown to chart staff only**: other viewers get a
+  generic message instead of the exception text, which can carry the schema or
+  SQL, and ``?debug`` no longer re-raises the exception for them. A rejected chart
+  parameter keeps its message, which only echoes the viewer's own request
 
 
 1.8.0 (2026-08-18)
