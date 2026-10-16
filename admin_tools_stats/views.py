@@ -30,14 +30,24 @@ CSV_FORMULA_PREFIXES = ("=", "+", "-", "@", "\t", "\r")
 
 
 class InvalidChartParameter(ValueError):
-    """A chart-data request named a field the chart is not configured to expose.
+    """A chart-data request carries a parameter the chart cannot accept.
 
-    The data views aggregate ``select_box_operation_field`` straight from the
-    query string. Without this guard any viewer of a ``show_to_users`` chart -
-    including a non-staff user - could point the aggregate at an arbitrary field
+    The CSV view answers it with a ``400``, the chart data view shows it in
+    the chart. Most cases are malformed input; one is a guard: the data views
+    aggregate ``select_box_operation_field`` straight from the query string, so
+    without the check any viewer of a ``show_to_users`` chart - including a
+    non-staff user - could point the aggregate at an arbitrary field
     (``select_box_operation=Max&select_box_operation_field=<related>__email``)
     and read values out of rows the chart is only meant to count.
     """
+
+
+def pop_chart_date(configuration: Dict[str, Union[str, List[str]]], name: str) -> datetime:
+    value = configuration.pop(name, None)
+    try:
+        return datetime.strptime(str(value), "%Y-%m-%d")
+    except ValueError as e:
+        raise InvalidChartParameter(f"{name} {value!r} is not a YYYY-MM-DD date.") from e
 
 
 class AdminChartsView(TemplateView):
@@ -124,6 +134,12 @@ class ChartDataMixin:
                 f"Operation field {operation_field!r} is not configured for this chart."
             )
 
+    def check_operation(self, request: HttpRequest, dashboard_stats: DashboardStats) -> None:
+        """Reject an operation the chart does not offer, like the operation field."""
+        operation = request.GET.get("select_box_operation")
+        if operation and operation not in dashboard_stats.get_allowed_operations():
+            raise InvalidChartParameter(f"Operation {operation!r} is not offered by this chart.")
+
     def get_chart_series_data(
         self,
         request: HttpRequest,
@@ -131,6 +147,7 @@ class ChartDataMixin:
         interval: Optional[Interval] = None,
     ) -> Dict[str, Any]:
         self.check_operation_field(request, dashboard_stats)
+        self.check_operation(request, dashboard_stats)
         configuration: Dict[str, Union[str, List[str]]] = {
             item: request.GET[item] for item in request.GET
         }
@@ -139,9 +156,13 @@ class ChartDataMixin:
             # the cache is shared and a recalculation runs the full chart query
             remove_multiple_keys(configuration, ["reload", "reload_all"])
 
-        selected_interval: Interval = Interval(
+        interval_choice = (
             configuration.pop("select_box_interval", interval) or dashboard_stats.default_time_scale
         )
+        try:
+            selected_interval = Interval(interval_choice)
+        except ValueError as e:
+            raise InvalidChartParameter(f"Interval {interval_choice!r} is not valid.") from e
         operation = configuration.pop(
             "select_box_operation", dashboard_stats.type_operation_field_name
         )
@@ -156,16 +177,16 @@ class ChartDataMixin:
         chart_type = configuration.pop("select_box_chart_type", dashboard_stats.default_chart_type)
 
         chart_tz = get_charts_timezone()
-        time_since = datetime.strptime(str(configuration.pop("time_since")), "%Y-%m-%d")
+        time_since = pop_chart_date(configuration, "time_since")
         time_since = truncate(time_since, selected_interval.val())
         time_since = time_since.astimezone(chart_tz)
 
-        time_until = datetime.strptime(str(configuration.pop("time_until")), "%Y-%m-%d")
+        time_until = pop_chart_date(configuration, "time_until")
         time_until = truncate_ceiling(time_until, selected_interval.val())
         time_until = time_until.astimezone(chart_tz)
 
         if time_since > time_until:
-            raise ValueError("Time since is greater than time until")
+            raise InvalidChartParameter("Time since is greater than time until")
 
         if dashboard_stats.cache_values:
             get_time_series = dashboard_stats.get_multi_time_series_cached

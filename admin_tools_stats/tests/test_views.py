@@ -28,6 +28,7 @@ from admin_tools_stats.views import (
     AnalyticsView,
     ChartDataView,
     Interval,
+    InvalidChartParameter,
     escape_csv_formula,
 )
 
@@ -342,6 +343,8 @@ class ChartDataViewContextTests(BaseSuperuserAuthenticatedClient):
         Test correct context in more complicated timezone setting
         Set select_box_operation field
         """
+        self.kid_stats.allowed_type_operation_field_name = ["Count", "Avg"]
+        self.kid_stats.save()
         baker.make("TestKid", birthday=datetime(2021, 10, 30, tzinfo=timezone.utc), height=150)
         baker.make("TestKid", birthday=datetime(2021, 10, 31, tzinfo=timezone.utc), height=160)
         baker.make("TestKid", birthday=datetime(2021, 11, 1, tzinfo=timezone.utc), height=170)
@@ -535,8 +538,7 @@ class SuperuserViewsTests(BaseSuperuserAuthenticatedClient):
         response = self.client.get(url)
         self.assertContains(
             response,
-            b"time data \\u00272010\\u002D13\\u002D12\\u0027 "
-            b"does not match format \\u0027%Y\\u002D%m\\u002D%d\\u0027",
+            b"time_until \\u00272010\\u002D13\\u002D12\\u0027 is not a YYYY\\u002DMM\\u002DDD date.",
         )
 
     @override_settings(USE_TZ=True, TIME_ZONE="UTC")
@@ -548,7 +550,7 @@ class SuperuserViewsTests(BaseSuperuserAuthenticatedClient):
         url = reverse("chart-data", kwargs={"graph_key": "user_graph"})
         url += "?time_since=2010-10-08&time_until=2010-13-12&debug=True"
         with self.assertRaisesRegex(
-            ValueError, "^time data '2010-13-12' does not match format '%Y-%m-%d'$"
+            InvalidChartParameter, "^time_until '2010-13-12' is not a YYYY-MM-DD date.$"
         ):
             self.client.get(url)
 
@@ -959,17 +961,17 @@ class CSVDownloadSuperuserTests(BaseSuperuserAuthenticatedClient):
     def test_csv_download_invalid_date_range(self):
         url = reverse("chart-csv", kwargs={"graph_key": "user_graph"})
         url += "?time_since=2010-11-08&time_until=2010-10-12"
-        with self.assertRaisesRegex(ValueError, "Time since is greater than time until"):
-            self.client.get(url)
+        response = self.client.get(url)
+        self.assertContains(response, "Time since is greater than time until", status_code=400)
 
     @override_settings(USE_TZ=True, TIME_ZONE="UTC")
     def test_csv_download_invalid_date_format(self):
         url = reverse("chart-csv", kwargs={"graph_key": "user_graph"})
         url += "?time_since=2010-10-08&time_until=2010-13-12"
-        with self.assertRaisesRegex(
-            ValueError, "^time data '2010-13-12' does not match format '%Y-%m-%d'$"
-        ):
-            self.client.get(url)
+        response = self.client.get(url)
+        self.assertContains(
+            response, "time_until '2010-13-12' is not a YYYY-MM-DD date.", status_code=400
+        )
 
 
 class CSVDownloadUserTests(BaseUserAuthenticatedClient):
@@ -1426,6 +1428,18 @@ class BadChartRequestTests(BaseSuperuserAuthenticatedClient):
         )
         baker.make("User", date_joined=datetime(2010, 10, 10, 12, tzinfo=timezone.utc))
 
+    def get(self, view_name, **params):
+        query = {
+            "time_since": "2010-10-10",
+            "time_until": "2010-10-10",
+            "select_box_interval": "days",
+            "select_box_chart_type": "discreteBarChart",
+            **params,
+        }
+        query = {key: value for key, value in query.items() if value is not None}
+        url = reverse(view_name, kwargs={"graph_key": "user_graph"})
+        return self.client.get(url + "?" + urlencode(query))
+
     def test_an_unknown_chart_is_404(self):
         for url in (
             reverse("chart-data", kwargs={"graph_key": "no_such_chart"}),
@@ -1435,3 +1449,29 @@ class BadChartRequestTests(BaseSuperuserAuthenticatedClient):
         ):
             with self.subTest(url):
                 self.assertEqual(self.client.get(url).status_code, 404)
+
+    @override_settings(USE_TZ=True, TIME_ZONE="UTC")
+    def test_a_malformed_csv_request_is_400(self):
+        for params in (
+            {"time_since": "2010-13-10"},
+            {"time_until": None},
+            {"time_since": "2010-10-11"},
+            {"select_box_interval": "fortnights"},
+            {"select_box_operation": "NoSuchOperation"},
+            {"select_box_operation": "Max"},
+        ):
+            with self.subTest(params):
+                self.assertEqual(self.get("chart-csv", **params).status_code, 400)
+
+    @override_settings(USE_TZ=True, TIME_ZONE="UTC")
+    def test_an_operation_the_chart_does_not_offer_is_a_chart_error(self):
+        response = self.get("chart-data", select_box_operation="Max")
+        self.assertContains(response, "is not offered by this chart")
+
+    @override_settings(USE_TZ=True, TIME_ZONE="UTC")
+    def test_the_offered_operations_are_accepted(self):
+        for operation in ("Count", "Sum", ""):
+            with self.subTest(operation):
+                self.assertEqual(
+                    self.get("chart-csv", select_box_operation=operation).status_code, 200
+                )
