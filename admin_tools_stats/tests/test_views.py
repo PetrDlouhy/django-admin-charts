@@ -16,6 +16,7 @@ from decimal import Decimal
 from pathlib import Path
 
 from django.contrib.auth.models import Permission, User
+from django.core.exceptions import FieldError
 from django.test import RequestFactory
 from django.test.utils import override_settings
 from django.urls import reverse
@@ -1287,3 +1288,48 @@ class CacheReloadPermissionTests(BaseUserAuthenticatedClient):
     def test_chart_staff_can_reload(self):
         self.user.user_permissions.add(Permission.objects.get(codename="view_dashboardstats"))
         self.assertEqual(csv_day_value(self, "user_graph", "&reload_all=true"), 1)
+
+
+class ChartErrorDisclosureTests(BaseUserAuthenticatedClient):
+    """A failing chart shows the error details to chart staff only.
+
+    The exception text can carry the schema (a ``FieldError`` lists every field
+    of the model) or SQL, and ``?debug`` re-raised it into the error page of
+    any viewer.
+    """
+
+    def setUp(self):
+        super().setUp()
+        baker.make(
+            "DashboardStats",
+            date_field_name="no_such_field",
+            model_name="User",
+            model_app_name="auth",
+            graph_key="broken_graph",
+            user_field_name=None,
+            show_to_users=True,
+        )
+        self.url = reverse("chart-data", kwargs={"graph_key": "broken_graph"}) + (
+            "?time_since=2010-10-08&time_until=2010-10-12&select_box_interval=days"
+            "&select_box_chart_type=discreteBarChart"
+        )
+
+    def get_logged(self, url):
+        with self.assertLogs("admin_tools_stats.views", "ERROR"):
+            return self.client.get(url)
+
+    @override_settings(USE_TZ=True, TIME_ZONE="UTC")
+    def test_a_viewer_gets_a_generic_error(self):
+        for url in (self.url, self.url + "&debug=True"):
+            with self.subTest(url):
+                response = self.get_logged(url)
+                self.assertNotContains(response, "no_such_field")
+                self.assertContains(response, "This chart could not be calculated.")
+
+    @override_settings(USE_TZ=True, TIME_ZONE="UTC")
+    def test_chart_staff_get_the_details(self):
+        self.user.user_permissions.add(Permission.objects.get(codename="view_dashboardstats"))
+        response = self.get_logged(self.url)
+        self.assertContains(response, "Cannot resolve keyword")
+        with self.assertRaises(FieldError):
+            self.client.get(self.url + "&debug=True")
