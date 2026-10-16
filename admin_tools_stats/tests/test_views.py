@@ -14,16 +14,22 @@ import re
 from datetime import datetime, timezone
 from decimal import Decimal
 from pathlib import Path
+from urllib.parse import urlencode
 
 from django.contrib.auth.models import Permission, User
 from django.core.exceptions import FieldError
-from django.test import RequestFactory
+from django.test import RequestFactory, SimpleTestCase
 from django.test.utils import override_settings
 from django.urls import reverse
 from model_bakery import baker
 
 from admin_tools_stats.models import CachedValue, DashboardStats
-from admin_tools_stats.views import AnalyticsView, ChartDataView, Interval
+from admin_tools_stats.views import (
+    AnalyticsView,
+    ChartDataView,
+    Interval,
+    escape_csv_formula,
+)
 
 from .utils import (
     BaseSuperuserAuthenticatedClient,
@@ -1333,3 +1339,71 @@ class ChartErrorDisclosureTests(BaseUserAuthenticatedClient):
         self.assertContains(response, "Cannot resolve keyword")
         with self.assertRaises(FieldError):
             self.client.get(self.url + "&debug=True")
+
+
+class CSVFormulaInjectionTests(BaseSuperuserAuthenticatedClient):
+    """No CSV cell a request or the chart data controls can start a formula.
+
+    The CSV echoes every extra query parameter (name and value), the requested
+    chart type and operation, and the divide-series labels taken from the
+    data: a link like ``?note==HYPERLINK(...)`` handed to a staff member put a
+    live formula into their spreadsheet.
+    """
+
+    @override_settings(USE_TZ=True, TIME_ZONE="UTC")
+    def test_formula_cells_are_escaped(self):
+        stats = baker.make(
+            "DashboardStats",
+            date_field_name="appointment",
+            model_name="TestKid",
+            model_app_name="demoproject",
+            graph_key="kid_graph",
+            type_operation_field_name="Sum",
+            operation_field_name="age",
+        )
+        criteria = baker.make(
+            "DashboardStatsCriteria", criteria_name="name", dynamic_criteria_field_name="name"
+        )
+        m2m = baker.make(
+            "CriteriaToStatsM2M", criteria=criteria, stats=stats, use_as="multiple_series"
+        )
+        baker.make(
+            "TestKid",
+            appointment=datetime(2010, 10, 10, 12, tzinfo=timezone.utc),
+            name="=1+2",
+            age=-5,
+        )
+        query = urlencode(
+            {
+                "time_since": "2010-10-10",
+                "time_until": "2010-10-10",
+                "select_box_interval": "days",
+                "select_box_chart_type": "@SUM(1)",
+                "select_box_multiple_series": m2m.pk,
+                "note": '=HYPERLINK("https://attacker.test","x")',
+                "+cmd": "-1+1",
+            }
+        )
+        response = self.client.get(
+            reverse("chart-csv", kwargs={"graph_key": "kid_graph"}) + "?" + query
+        )
+        self.assertEqual(response.status_code, 200)
+        labels, values, header, data = csv_rows(response)
+        settings = dict(zip(labels, values))
+        self.assertEqual(settings["Chart Type"], "'@SUM(1)")
+        self.assertEqual(settings["note"], '\'=HYPERLINK("https://attacker.test","x")')
+        self.assertEqual(settings["'+cmd"], "'-1+1")
+        self.assertEqual(header, ["Date", "'=1+2"])
+        self.assertEqual(data, ["2010-10-10 00:00:00", "-5"])
+
+
+class EscapeCSVFormulaTests(SimpleTestCase):
+    def test_formula_prefixes_are_escaped(self):
+        for cell in ("=1", "+1", "-1", "@A1", "\t=1", "\r=1"):
+            with self.subTest(cell):
+                self.assertEqual(escape_csv_formula(cell), "'" + cell)
+
+    def test_other_cells_are_kept(self):
+        for cell in ("Count", "", "2010-10-10 00:00:00", " =1", -5, 1.5, None):
+            with self.subTest(cell):
+                self.assertEqual(escape_csv_formula(cell), cell)

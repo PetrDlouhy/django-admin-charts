@@ -30,6 +30,12 @@ Security
   generic message instead of the exception text, which can carry the schema or
   SQL, and ``?debug`` no longer re-raises the exception for them. A rejected chart
   parameter keeps its message, which only echoes the viewer's own request
+* **the CSV download escapes cells that would start a spreadsheet formula**: every
+  extra query parameter (name and value), the requested chart type and operation
+  and the series labels taken from the data were written unescaped, so a crafted
+  link (``?note==HYPERLINK(...)``) put a live formula into the spreadsheet of
+  whoever opened the CSV. A string cell starting with ``=``, ``+``, ``-``, ``@``,
+  tab or carriage return now gets a leading ``'``; numbers are unchanged
 
 
 1.8.0 (2026-08-18)
