@@ -1104,3 +1104,76 @@ class CachedChartsBugReproductionTests(BaseSuperuserAuthenticatedClient):
         # Oct 31 23:00 UTC is Nov 1 00:00 CET, and Nov 30 23:00 UTC is Dec 1
         # 00:00 CET: the cached values must be labelled with the local month
         self.assertEqual(months, {"100.0": 11, "200.0": 12})
+
+
+class OperationFieldGuardTests(BaseUserAuthenticatedClient):
+    """A chart aggregates only its configured field(s), whatever the URL asks for.
+
+    The data views read ``select_box_operation_field`` from the query string and
+    aggregate over it. Without a guard, any viewer of a ``show_to_users`` chart -
+    a non-staff user included - could name an unrelated field and read its
+    aggregate (e.g. the ``Max`` of another user's email) from the rows the chart
+    is only meant to count.
+    """
+
+    probe_email = "operation-field-probe@example.test"
+
+    def setUp(self):
+        self.stats = baker.make(
+            "DashboardStats",
+            date_field_name="date_joined",
+            graph_title="Users chart",
+            model_name="User",
+            model_app_name="auth",
+            graph_key="user_graph",
+            operation_field_name="is_active,is_staff",
+            user_field_name=None,
+            show_to_users=True,
+        )
+        baker.make(
+            "User",
+            email=self.probe_email,
+            is_active=True,
+            date_joined=datetime(2010, 10, 10, tzinfo=timezone.utc),
+        )
+        super().setUp()
+
+    def _url(self, view_name, operation, operation_field):
+        return reverse(view_name, kwargs={"graph_key": "user_graph"}) + (
+            "?time_since=2010-10-08&time_until=2010-10-12&select_box_interval=days"
+            "&select_box_chart_type=discreteBarChart"
+            f"&select_box_operation={operation}"
+            f"&select_box_operation_field={operation_field}"
+        )
+
+    @override_settings(USE_TZ=True, TIME_ZONE="UTC")
+    def test_unconfigured_field_is_refused_in_chart_data(self):
+        """The JSON/HTML view renders the normal chart error, not the leaked value."""
+        response = self.client.get(self._url("chart-data", "Max", "email"))
+        self.assertNotContains(response, self.probe_email)
+        self.assertContains(response, "is not configured for this chart")
+
+    @override_settings(USE_TZ=True, TIME_ZONE="UTC")
+    def test_unconfigured_field_is_refused_in_csv(self):
+        """The CSV view answers 400 instead of streaming the leaked aggregate."""
+        response = self.client.get(self._url("chart-csv", "Max", "email"))
+        self.assertEqual(response.status_code, 400)
+        self.assertNotContains(response, self.probe_email, status_code=400)
+
+    @override_settings(USE_TZ=True, TIME_ZONE="UTC")
+    def test_configured_field_is_still_aggregated(self):
+        """A field the chart does configure keeps working."""
+        response = self.client.get(self._url("chart-data", "Count", "is_active"))
+        self.assertNotContains(response, "is not configured for this chart")
+        assertContainsAny(
+            self,
+            response,
+            ('{"x": 1286668800000, "y": 1}', '{"y": 1, "x": 1286668800000}'),
+        )
+
+    @override_settings(USE_TZ=True, TIME_ZONE="UTC")
+    def test_divide_all_choice_is_accepted_in_csv(self):
+        """The empty "divide all" choice is a valid value, not a rejected field."""
+        response = self.client.get(self._url("chart-csv", "Count", ""))
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response["Content-Type"], "text/csv")

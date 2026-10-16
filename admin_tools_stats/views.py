@@ -18,6 +18,17 @@ from .models import DashboardStats, Interval, get_charts_timezone, truncate_ceil
 logger = logging.getLogger(__name__)
 
 
+class InvalidChartParameter(ValueError):
+    """A chart-data request named a field the chart is not configured to expose.
+
+    The data views aggregate ``select_box_operation_field`` straight from the
+    query string. Without this guard any viewer of a ``show_to_users`` chart -
+    including a non-staff user - could point the aggregate at an arbitrary field
+    (``select_box_operation=Max&select_box_operation_field=<related>__email``)
+    and read values out of rows the chart is only meant to count.
+    """
+
+
 class AdminChartsView(TemplateView):
     template_name = "admin_tools_stats/admin_charts.js"
 
@@ -76,12 +87,26 @@ class ChartDataMixin:
             user.has_perm("admin_tools_stats.view_dashboardstats") or dashboard_stats.show_to_users
         )
 
+    def check_operation_field(self, request: HttpRequest, dashboard_stats: DashboardStats) -> None:
+        """Reject an aggregation field the chart is not configured to expose.
+
+        Only the chart's own operation field(s) - or the empty "divide all"
+        choice - may drive the aggregate; anything else would leak data from
+        the aggregated rows (see ``InvalidChartParameter``).
+        """
+        operation_field = request.GET.get("select_box_operation_field")
+        if operation_field and operation_field not in dashboard_stats.get_operations_list():
+            raise InvalidChartParameter(
+                f"Operation field {operation_field!r} is not configured for this chart."
+            )
+
     def get_chart_series_data(
         self,
         request: HttpRequest,
         dashboard_stats: DashboardStats,
         interval: Optional[Interval] = None,
     ) -> Dict[str, Any]:
+        self.check_operation_field(request, dashboard_stats)
         configuration: Dict[str, Union[str, List[str]]] = {
             item: request.GET[item] for item in request.GET
         }
@@ -236,7 +261,10 @@ class ChartDataCSVView(ChartDataMixin, View):
         if not self.check_chart_permission(dashboard_stats, request.user):
             return HttpResponse("Permission denied", status=403)
 
-        chart_data = self.get_chart_series_data(request, dashboard_stats)
+        try:
+            chart_data = self.get_chart_series_data(request, dashboard_stats)
+        except InvalidChartParameter as e:
+            return HttpResponse(str(e), status=400, content_type="text/plain")
         series = chart_data["series"]
         time_since = chart_data["time_since"]
         time_until = chart_data["time_until"]
