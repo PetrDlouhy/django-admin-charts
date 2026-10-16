@@ -42,6 +42,13 @@ Fixes
 
 * **an unknown chart is a 404, not a 500**, in the chart data, CSV and analytics
   chart views
+* **a malformed chart request is a 400, not a 500**: a missing or malformed
+  date, a start after the end, an unknown interval or operation is a ``400`` in
+  the CSV view and an in-chart error in the chart data view
+* **a chart accepts only the operations it offers**: ``select_box_operation``
+  must be one of the chart's allowed operations or its default operation, like
+  ``select_box_operation_field`` since the fix above. A URL that asked a chart
+  for another aggregate is now refused
 
 
 1.8.0 (2026-08-18)

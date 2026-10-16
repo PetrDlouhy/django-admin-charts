@@ -518,6 +518,13 @@ class DashboardStats(models.Model):
         """Whether the chart aggregates only the rows of ``user`` (``user_field_name``)."""
         return bool(self.user_field_name) and not has_full_chart_access(user)
 
+    def get_allowed_operations(self) -> List[str]:
+        """The operations a request may choose: the offered ones and the default."""
+        return [
+            *(self.allowed_type_operation_field_name or []),
+            self.type_operation_field_name or "Count",
+        ]
+
     def get_operations_list(self):
         if self.operation_field_name:
             return self.operation_field_name.replace(" ", "").split(",")
