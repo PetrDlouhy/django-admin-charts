@@ -22,17 +22,19 @@ jobs:
 
     strategy:
       matrix:
-        DJANGO_VERSION: ['5.2.*', '6.0.*']
+        DJANGO_VERSION: ['5.2.*', '6.0.*', '6.1.*']
         DB_ENGINE: [ 'postgres', 'mysql' ]
         python-version: ['3.10', '3.11', '3.12', '3.13', '3.14']
         exclude:
-          # Django 5.2 supports Python 3.10 - 3.13
-          - DJANGO_VERSION: '5.2.*'
-            python-version: '3.14'
-          # Django 6.0 supports Python 3.12+
+          # Django 5.2 supports Python 3.10 - 3.14 (3.14 since 5.2.8)
+          # Django 6.0 and 6.1 support Python 3.12 - 3.14
           - DJANGO_VERSION: '6.0.*'
             python-version: '3.10'
           - DJANGO_VERSION: '6.0.*'
+            python-version: '3.11'
+          - DJANGO_VERSION: '6.1.*'
+            python-version: '3.10'
+          - DJANGO_VERSION: '6.1.*'
             python-version: '3.11'
       fail-fast: false
 
@@ -49,7 +51,7 @@ jobs:
         ports:
           - 5432:5432
       mysql:
-        image: mysql:8.3
+        image: mysql:8.4
         env:
           MYSQL_DATABASE: test_db
           MYSQL_USER: db_user
