@@ -25,6 +25,8 @@ logger = logging.getLogger(__name__)
 
 GENERIC_CHART_ERROR = "This chart could not be calculated. The error has been logged."
 
+CSV_FORMULA_PREFIXES = ("=", "+", "-", "@", "\t", "\r")
+
 
 class InvalidChartParameter(ValueError):
     """A chart-data request named a field the chart is not configured to expose.
@@ -69,6 +71,19 @@ def get_dateformat(interval: Interval, chart_type):
 def remove_multiple_keys(in_dict, entries_to_remove):
     for k in entries_to_remove:
         in_dict.pop(k, None)
+
+
+def escape_csv_formula(cell):
+    """Keep a spreadsheet from running a CSV cell as a formula (CSV injection).
+
+    The CSV echoes query-string parameters and series labels from the data;
+    Excel, LibreOffice and Google Sheets evaluate a cell starting with one of
+    ``CSV_FORMULA_PREFIXES``. The leading apostrophe (OWASP's advice) shows it
+    as text. Only strings are touched: numbers, negative ones included, stay numbers.
+    """
+    if isinstance(cell, str) and cell.startswith(CSV_FORMULA_PREFIXES):
+        return "'" + cell
+    return cell
 
 
 def json_serializable_value(value):
@@ -295,7 +310,10 @@ class ChartDataCSVView(ChartDataMixin, View):
             f'{time_until.strftime("%Y%m%d")}.csv"'
         )
 
-        writer = csv.writer(response)
+        csv_writer = csv.writer(response)
+
+        def writerow(row):
+            csv_writer.writerow([escape_csv_formula(cell) for cell in row])
 
         settings_labels = [
             "Graph Key",
@@ -330,8 +348,8 @@ class ChartDataCSVView(ChartDataMixin, View):
             settings_labels.append(key)
             settings_values.append(str(value) if value else "")
 
-        writer.writerow(settings_labels)
-        writer.writerow(settings_values)
+        writerow(settings_labels)
+        writerow(settings_values)
 
         serie_keys = set()
         for date_data in series.values():
@@ -340,7 +358,7 @@ class ChartDataCSVView(ChartDataMixin, View):
         serie_keys = sorted(serie_keys, key=str)
 
         header = ["Date"] + [str(key) for key in serie_keys]
-        writer.writerow(header)
+        writerow(header)
 
         for date in sorted(
             series.keys(),
@@ -351,7 +369,7 @@ class ChartDataCSVView(ChartDataMixin, View):
             for key in serie_keys:
                 value = series[date].get(key, 0)
                 row.append(value if value else 0)
-            writer.writerow(row)
+            writerow(row)
 
         return response
 
